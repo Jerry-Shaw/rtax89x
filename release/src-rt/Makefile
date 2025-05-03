@@ -1033,7 +1033,7 @@ else
 		exit 1 ; \
 	fi
 ifeq ($(RAX120),y)
-	# RAX120 kernel.gz rootfs DTB=$(DTB) IMG=$(IMGNAME)
+	# RAX120 kernel.gz rootfs DTB=$(DTB) IMG=$(IMGNAME) 91000 or 93000,
 	gcc asustools/mkdniimg.c -o asustools/mkdniimg
 	gcc asustools/rax120.c -o asustools/rax120
 	make -C asustools/u-boot-2013.07-rc1 tools
@@ -1042,7 +1042,7 @@ ifeq ($(RAX120),y)
 	@gzip -9 -c $(PLATFORMDIR)/vmlinus > $(PLATFORMDIR)/rax120.kernel
 	@cp -f $(PLATFORMDIR)/rax120.kernel $(PLATFORMDIR)/Image.img
 	@SIZE=`wc -c $(PLATFORMDIR)/Image.img | awk '{print $$1}'` ; \
-		PAD=`expr 6422528 - $${SIZE} - 64 - 91000` ; \
+		PAD=`expr 6422528 - $${SIZE} - 64 - 93000` ; \
 		dd if=/dev/zero count=1 bs=$${PAD} 2> /dev/null | tr \\000 \\377 >> $(PLATFORMDIR)/Image.img
 	asustools/mkits.sh -D qcom-ipq807x-rax120 -o image/qcom-ipq807x-rax120.its -k $(PLATFORMDIR)/Image.img -d $(LINUXDIR)/arch/$(ARCH)/boot/dts/$(DTB) -C gzip -a 0x41208000 -e 0x41208000 -A $(ARCH) -v $(KERNEL_VER)
 	@PATH=$(LINUXDIR)/scripts/dtc asustools/mkimage -f image/qcom-ipq807x-rax120.its image/$(IMGNAME).img
@@ -1765,6 +1765,10 @@ define RouterOptions
 		sed -i "/RTCONFIG_TCPDUMP/d" $(1); \
 		echo "RTCONFIG_TCPDUMP=y" >>$(1); \
 	fi;
+	if [ "$(TCPREPLAY)" = "y" ]; then \
+		sed -i "/RTCONFIG_TCPREPLAY/d" $(1); \
+		echo "RTCONFIG_TCPREPLAY=y" >>$(1); \
+	fi;
 	if [ "$(DUMP4000)" = "y" ]; then \
 		sed -i "/RTCONFIG_DUMP4000/d" $(1); \
 		echo "RTCONFIG_DUMP4000=y" >>$(1); \
@@ -2057,10 +2061,14 @@ define RouterOptions
 		echo "RTCONFIG_LIBASC=y" >>$(1); \
 	fi;
 	if [ "$(ASD)" = "y" ]; then \
-		sed -i "/RTCONFIG_ASD/d" $(1); \
+		sed -i "/RTCONFIG_ASD\>/d" $(1); \
 		echo "RTCONFIG_ASD=y" >>$(1); \
 		sed -i "/RTCONFIG_LIBASC/d" $(1); \
 		echo "RTCONFIG_LIBASC=y" >>$(1); \
+	fi;
+	if [ "$(ASD21)" = "y" ]; then \
+		sed -i "/RTCONFIG_ASD_2_1/d" $(1); \
+		echo "RTCONFIG_ASD_2_1=y" >>$(1); \
 	fi;
 	if [ "$(RSYSLOGD)" = "y" ]; then \
 		sed -i "/RTCONFIG_RSYSLOGD/d" $(1); \
@@ -2496,6 +2504,14 @@ define RouterOptions
 			if [ "$(OCNVC)" = "y" ]; then \
 				sed -i "/RTCONFIG_OCNVC/d" $(1); \
 				echo "RTCONFIG_OCNVC=y" >>$(1); \
+			fi; \
+			if [ "$(V6OPTION)" = "y" ]; then \
+				sed -i "/RTCONFIG_V6OPTION/d" $(1); \
+				echo "RTCONFIG_V6OPTION=y" >>$(1); \
+			fi; \
+			if [ "$(DSLITE)" = "y" ]; then \
+				sed -i "/RTCONFIG_DSLITE/d" $(1); \
+				echo "RTCONFIG_DSLITE=y" >>$(1); \
 			fi; \
 		fi; \
 	fi;
@@ -3202,11 +3218,11 @@ define RouterOptions
 	else \
 		sed -i "/RTCONFIG_TUNNEL/d" $(1); \
 		echo "# RTCONFIG_TUNNEL is not set" >>$(1); \
- 	fi;
+	fi;
 	if [ "$(UPLOADER)" = "y" ]; then \
 		sed -i "/RTCONFIG_UPLOADER/d" $(1); \
 		echo "RTCONFIG_UPLOADER=y" >>$(1); \
- 	fi;
+	fi;
 	if [ "$(NATNL_AICLOUD)" = "y" ]; then \
 		sed -i "/RTCONFIG_TUNNEL/d" $(1); \
 		echo "RTCONFIG_TUNNEL=y" >>$(1); \
@@ -3260,6 +3276,12 @@ define RouterOptions
 	if [ "$(WTFAST)" = "y" ]; then \
 		sed -i "/RTCONFIG_WTFAST/d" $(1); \
 		echo "RTCONFIG_WTFAST=y" >>$(1); \
+	fi;
+	sed -i "/RTCONFIG_WTFAST_V2/d" $(1); \
+	if [ "$(WTFAST_V2)" = "y" ]; then \
+		echo "RTCONFIG_WTFAST_V2=y" >>$(1); \
+	else \
+		echo "# RTCONFIG_WTFAST_V2 is not set" >>$(1); \
 	fi;
 	if [ "$(IFTTT)" = "y" ]; then \
 		sed -i "/RTCONFIG_IFTTT/d" $(1); \
@@ -4060,6 +4082,10 @@ define RouterOptions
 		sed -i "/RTCONFIG_UUPLUGIN/d" $(1); \
 		echo "RTCONFIG_UUPLUGIN=y" >>$(1); \
 	fi;
+	if [ "$(GEARUPPLUGIN)" = "y" ]; then \
+		sed -i "/RTCONFIG_GEARUPPLUGIN/d" $(1); \
+		echo "RTCONFIG_GEARUPPLUGIN=y" >>$(1); \
+	fi;
 	if [ "$(TCPLUGIN)" = "y" ]; then \
 		sed -i "/RTCONFIG_TCPLUGIN/d" $(1); \
 		echo "RTCONFIG_TCPLUGIN=y" >>$(1); \
@@ -4291,7 +4317,7 @@ define RouterOptions
 		echo "RTCONFIG_SYSCLASSGPIO=y" >>$(1); \
 	fi;
 	if [ "$(MUSL_LIBC)" = "y" ]; then \
-		sed -i "/RTCONFIG_MUSL_LIBC/d" $(1); \
+		sed -i "/RTCONFIG_MUSL_LIBC\>/d" $(1); \
 		echo "RTCONFIG_MUSL_LIBC=y" >>$(1); \
 	fi;
 	if [ "$(RALINK_BUILDIN_WIFI)" = "y" ]; then \
@@ -6683,7 +6709,7 @@ get_extendno:
 	$(MAKE) $*-clean $*
 
 %-tags: dummy
-	@[ ! -d router/$* ] || ctags -a -R $(CTAGS_EXCLUDE_OPT) $(SRC_ROOT)/router/$*
+	@[ ! -d router/$* ] || $(if $(QCA),TMPDIR=.) ctags -a -R $(CTAGS_EXCLUDE_OPT) $(SRC_ROOT)/router/$*
 
 #
 # check extendno
@@ -6695,3 +6721,4 @@ get_extendno:
 .PHONY: dummy
 .PHONY: pre_tools
 .PHONY: get_extendno
+
