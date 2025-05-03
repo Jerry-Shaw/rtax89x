@@ -4,19 +4,13 @@ KERNEL_3_4_X_MODEL_LIST := $(addprefix _,$(addsuffix _,BRT-AC828 RT-AC88N RT-AC8
 IPQ806X_MODEL_LIST := $(addprefix _,$(addsuffix _,BRT-AC828 RT-AC88N RT-AC88S RT-AD7200))
 ifeq ($(MUSL64),y)
 #SPF8_MODEL_LIST := $(addprefix _,$(addsuffix _,GT-6000N))
-SPF11.0_MODEL_LIST := $(addprefix _,$(addsuffix _,))
 SPF11.1_MODEL_LIST := $(addprefix _,$(addsuffix _,RT-AX89U))
-IPQ807X_MODEL_LIST := $(addprefix _,$(addsuffix _,GT-AXY16000))	# SPF11.4
+IPQ807X_MODEL_LIST := $(addprefix _,$(addsuffix _,GT-AXY16000))	# SPF11.5
 else
-SPF8_MODEL_LIST := #$(addprefix _,$(addsuffix _,GT-6000N))
-SPF11.0_MODEL_LIST := $(addprefix _,$(addsuffix _,))
+#SPF8_MODEL_LIST := $(addprefix _,$(addsuffix _,GT-6000N))
 SPF11.1_MODEL_LIST := $(addprefix _,$(addsuffix _,RT-AX89U))
-IPQ807X_MODEL_LIST := $(addprefix _,$(addsuffix _,GT-AXY16000))	# SPF11.4
+IPQ807X_MODEL_LIST := $(addprefix _,$(addsuffix _,GT-AXY16000))	# SPF11.5
 endif
-
-# Select IPQ807X SoC
-export HE12_MODEL_LIST := $(addprefix _,$(addsuffix _,RT-AX89U GT-6000N))
-export HE20_MODEL_LIST := $(addprefix _,$(addsuffix _,GT-AXY16000))
 
 # Select toolchain for user-space program.
 # If model name is not list here, gcc 4.6.3 + uClibc 0.9.33 is selected.
@@ -65,11 +59,6 @@ $(error SPF8 is deleted!!!)
 export PLATFORM_ROUTER := spf8
 export LOADADDR := 42208000
 export LINUXDIR := $(SRCBASE)/linux/linux-4.4.x.spf8
-else ifneq ($(findstring $(_BUILD_NAME_),$(SPF11.0_MODEL_LIST)),)
-$(error SPF11.0 is deleted!!!)
-export PLATFORM_ROUTER := spf11.0
-export LOADADDR := 42208000
-export LINUXDIR := $(SRCBASE)/linux/linux-4.4.x.spf11.0
 else ifneq ($(findstring $(_BUILD_NAME_),$(SPF11.1_MODEL_LIST)),)
 export PLATFORM_ROUTER := spf11.1
 export LOADADDR := 42208000
@@ -78,6 +67,8 @@ else ifneq ($(findstring $(_BUILD_NAME_),$(IPQ807X_MODEL_LIST)),)
 export PLATFORM_ROUTER := ipq807x
 export LOADADDR := 42208000
 export LINUXDIR := $(SRCBASE)/linux/linux-4.4.x
+else
+$(error Build option unknown)
 endif
 
 export BUILD := $(shell (gcc -dumpmachine))
@@ -102,7 +93,7 @@ export READELF := $(TOOLS)/bin/arm-openwrt-linux-uclibcgnueabi-readelf
 endif
 
 ifneq ($(findstring $(_BUILD_NAME_),$(GCC520_MUSLLIBC64_MODEL_LIST)),)
-export RTVER := $(patsubst librt-%.so,%,$(shell basename $(wildcard $(TOOLS)/lib/librt-*.so)))
+export RTVER := $(if $(wildcard $(TOOLS)/lib/librt-*.so),$(patsubst librt-%.so,%,$(shell basename $(wildcard $(TOOLS)/lib/librt-*.so))))
 export CROSS_COMPILER := $(CROSS_COMPILE)
 export CONFIGURE := ./configure --host=aarch64-linux-gnu --build=$(BUILD)
 export HOSTCONFIG := linux-aarch64
@@ -118,7 +109,7 @@ export EXTRACFLAGS := -DBCMWPA2 -fno-delete-null-pointer-checks -march=armv8-a -
 endif
 
 else
-export RTVER := $(patsubst librt-%.so,%,$(shell basename $(wildcard $(TOOLS)/lib/librt-*.so)))
+export RTVER := $(if $(wildcard $(TOOLS)/lib/librt-*.so),$(patsubst librt-%.so,%,$(shell basename $(wildcard $(TOOLS)/lib/librt-*.so))))
 export CROSS_COMPILER := $(CROSS_COMPILE)
 export CONFIGURE := ./configure --host=arm-linux --build=$(BUILD)
 export HOSTCONFIG := linux-armv4
@@ -174,18 +165,13 @@ define platformRouterOptions
 	if [ "$(QCA)" = "y" ]; then \
 		sed -i "/RTCONFIG_QCA\>/d" $(1); \
 		echo "RTCONFIG_QCA=y" >>$(1); \
+		sed -i "/RTCONFIG_AVOID_TZ_ENV\>/d" $(1); \
+		echo "RTCONFIG_AVOID_TZ_ENV=y" >>$(1); \
 		if [ -n "$(findstring $(_BUILD_NAME_),$(SPF8_MODEL_LIST))" ] ; then \
 			sed -i "/RTCONFIG_SPF8_QSDK/d" $(1); \
 			echo "RTCONFIG_SPF8_QSDK=y" >>$(1); \
 			sed -i "/RTCONFIG_GLOBAL_INI\>/d" $(1); \
 			echo "# RTCONFIG_GLOBAL_INI is not set" >>$(1); \
-		elif [ -n "$(findstring $(_BUILD_NAME_),$(SPF11.0_MODEL_LIST))" ] ; then \
-			sed -i "/RTCONFIG_SPF11_QSDK/d" $(1); \
-			echo "RTCONFIG_SPF11_QSDK=y" >>$(1); \
-			sed -i "/RTCONFIG_CFG80211\>/d" $(1); \
-			echo "RTCONFIG_CFG80211=y" >>$(1); \
-			sed -i "/RTCONFIG_GLOBAL_INI\>/d" $(1); \
-			echo "RTCONFIG_GLOBAL_INI=y" >>$(1); \
 		elif [ -n "$(findstring $(_BUILD_NAME_),$(SPF11.1_MODEL_LIST))" ] ; then \
 			sed -i "/RTCONFIG_SPF11_1_QSDK/d" $(1); \
 			echo "RTCONFIG_SPF11_1_QSDK=y" >>$(1); \
@@ -196,8 +182,8 @@ define platformRouterOptions
 			sed -i "/RTCONFIG_HW_DOG/d" $(1); \
 			echo "RTCONFIG_HW_DOG=y" >>$(1); \
 		elif [ -n "$(findstring $(_BUILD_NAME_),$(IPQ807X_MODEL_LIST))" ] ; then \
-			sed -i "/RTCONFIG_SPF11_4_QSDK/d" $(1); \
-			echo "RTCONFIG_SPF11_4_QSDK=y" >>$(1); \
+			sed -i "/RTCONFIG_SPF11_5_QSDK/d" $(1); \
+			echo "RTCONFIG_SPF11_5_QSDK=y" >>$(1); \
 			sed -i "/RTCONFIG_CFG80211\>/d" $(1); \
 			echo "RTCONFIG_CFG80211=y" >>$(1); \
 			sed -i "/RTCONFIG_GLOBAL_INI\>/d" $(1); \
@@ -287,7 +273,7 @@ define platformRouterOptions
 			echo "RTCONFIG_SATA_LED=y" >>$(1); \
 		fi; \
 		if [ -n "$(wildcard $(TOOLS)/lib/ld-musl*)" ] ; then \
-			sed -i "/RTCONFIG_MUSL_LIBC/d" $(1); \
+			sed -i "/RTCONFIG_MUSL_LIBC\>/d" $(1); \
 			echo "RTCONFIG_MUSL_LIBC=y" >>$(1); \
 		fi; \
 	fi; \
@@ -453,7 +439,7 @@ define platformKernelConfig
 				sed -i "/CONFIG_THERMAL_HWMON\>/d" $(1); \
 				echo "CONFIG_THERMAL_HWMON=y" >>$(1); \
 			fi; \
-			if [ -n "$(findstring $(_BUILD_NAME_),$(SPF11.0_MODEL_LIST) $(SPF11.1_MODEL_LIST) $(IPQ807X_MODEL_LIST))" ] ; then \
+			if [ -n "$(findstring $(_BUILD_NAME_), $(SPF11.1_MODEL_LIST) $(IPQ807X_MODEL_LIST))" ] ; then \
 				sed -i "/CONFIG_ARCH_WANT_KMAP_ATOMIC_FLUSH\>/d" $(1); \
 				echo "CONFIG_ARCH_WANT_KMAP_ATOMIC_FLUSH=y" >>$(1); \
 				sed -i "/CONFIG_QCOM_DCC\>/d" $(1); \
@@ -546,7 +532,7 @@ define platformKernelConfig
 				echo "CONFIG_RMNET=y" >>$(1); \
 				sed -i "/CONFIG_NET_L3_MASTER_DEV\>/d" $(1); \
 				echo "CONFIG_NET_L3_MASTER_DEV=y" >>$(1); \
-				if [ -n "$(findstring $(_BUILD_NAME_),$(SPF11.0_MODEL_LIST) $(SPF11.1_MODEL_LIST))" ] ; then \
+				if [ -n "$(findstring $(_BUILD_NAME_), $(SPF11.1_MODEL_LIST))" ] ; then \
 					sed -i "/CONFIG_CNSS2_UCODE_DUMP\>/d" $(1); \
 					echo "CONFIG_CNSS2_UCODE_DUMP=y" >>$(1); \
 				fi; \
@@ -562,66 +548,6 @@ define platformKernelConfig
 					echo "# CONFIG_WIL6210_TRACING is not set" >>$(1); \
 					echo "CONFIG_WIL6210_WRITE_IOCTL=y" >>$(1); \
 				fi; \
-			fi; \
-			if [ -n "$(findstring $(_BUILD_NAME_),$(SPF11.0_MODEL_LIST))" ] ; then \
-				sed -i "/CONFIG_IPC_ROUTER\>/d" $(1); \
-				echo "CONFIG_IPC_ROUTER=y" >>$(1); \
-				sed -i "/CONFIG_IPQ807X_REMOTEPROC\>/d" $(1); \
-				echo "CONFIG_IPQ807X_REMOTEPROC=y" >>$(1); \
-				sed -i "/CONFIG_IPQ_REMOTEPROC_ADSP\>/d" $(1); \
-				echo "CONFIG_IPQ_REMOTEPROC_ADSP=y" >>$(1); \
-				sed -i "/CONFIG_MSM_GLINK\>/d" $(1); \
-				echo "CONFIG_MSM_GLINK=y" >>$(1); \
-				sed -i "/CONFIG_MSM_GLINK_SMEM_NATIVE_XPRT\>/d" $(1); \
-				echo "CONFIG_MSM_GLINK_SMEM_NATIVE_XPRT=y" >>$(1); \
-				sed -i "/CONFIG_MSM_GLINK_PKT\>/d" $(1); \
-				echo "CONFIG_MSM_GLINK_PKT=y" >>$(1); \
-				sed -i "/CONFIG_MSM_IPC_ROUTER_GLINK_XPRT\>/d" $(1); \
-				echo "CONFIG_MSM_IPC_ROUTER_GLINK_XPRT=y" >>$(1); \
-				sed -i "/CONFIG_MSM_QMI_INTERFACE\>/d" $(1); \
-				echo "CONFIG_MSM_QMI_INTERFACE=y" >>$(1); \
-				sed -i "/CONFIG_MSM_TEST_QMI_CLIENT\>/d" $(1); \
-				echo "CONFIG_MSM_TEST_QMI_CLIENT=y" >>$(1); \
-				sed -i "/CONFIG_MSM_RPM_GLINK\>/d" $(1); \
-				echo "CONFIG_MSM_RPM_GLINK=y" >>$(1); \
-				sed -i "/CONFIG_IPQ_SUBSYSTEM_DUMP\>/d" $(1); \
-				echo "CONFIG_IPQ_SUBSYSTEM_DUMP=y" >>$(1); \
-				sed -i "/CONFIG_DIAG_OVER_QRTR\>/d" $(1); \
-				echo "# CONFIG_DIAG_OVER_QRTR is not set" >>$(1); \
-				sed -i "/CONFIG_RPMSG\>/d" $(1); \
-				echo "# CONFIG_RPMSG is not set" >>$(1); \
-				sed -i "/CONFIG_RPMSG_CHAR\>/d" $(1); \
-				echo "# CONFIG_RPMSG_CHAR is not set" >>$(1); \
-				sed -i "/CONFIG_RPMSG_QCOM_GLINK_NATIVE\>/d" $(1); \
-				echo "# CONFIG_RPMSG_QCOM_GLINK_NATIVE is not set" >>$(1); \
-				sed -i "/CONFIG_RPMSG_QCOM_GLINK_RPM\>/d" $(1); \
-				echo "# CONFIG_RPMSG_QCOM_GLINK_RPM is not set" >>$(1); \
-				sed -i "/CONFIG_RPMSG_QCOM_GLINK_SMEM\>/d" $(1); \
-				echo "# CONFIG_RPMSG_QCOM_GLINK_SMEM is not set" >>$(1); \
-				sed -i "/CONFIG_RPMSG_QCOM_SMD\>/d" $(1); \
-				echo "# CONFIG_RPMSG_QCOM_SMD is not set" >>$(1); \
-				sed -i "/CONFIG_MSM_RPM_RPMSG\>/d" $(1); \
-				echo "# CONFIG_MSM_RPM_RPMSG is not set" >>$(1); \
-				sed -i "/CONFIG_QRTR_SMD\>/d" $(1); \
-				echo "# CONFIG_QRTR_SMD is not set" >>$(1); \
-				sed -i "/CONFIG_QCOM_RPROC_COMMON\>/d" $(1); \
-				echo "# CONFIG_QCOM_RPROC_COMMON is not set" >>$(1); \
-				sed -i "/CONFIG_QCOM_Q6V5_COMMON\>/d" $(1); \
-				echo "# CONFIG_QCOM_Q6V5_COMMON is not set" >>$(1); \
-				sed -i "/CONFIG_QCOM_Q6V5_ADSP\>/d" $(1); \
-				echo "# CONFIG_QCOM_Q6V5_ADSP is not set" >>$(1); \
-				sed -i "/CONFIG_QCOM_Q6V5_WCSS\>/d" $(1); \
-				echo "# CONFIG_QCOM_Q6V5_WCSS is not set" >>$(1); \
-				sed -i "/CONFIG_QCOM_SYSMON\>/d" $(1); \
-				echo "# CONFIG_QCOM_SYSMON is not set" >>$(1); \
-				sed -i "/CONFIG_IPQ_SS_DUMP\>/d" $(1); \
-				echo "# CONFIG_IPQ_SS_DUMP is not set" >>$(1); \
-				sed -i "/CONFIG_QCOM_GLINK_SSR\>/d" $(1); \
-				echo "# CONFIG_QCOM_GLINK_SSR is not set" >>$(1); \
-				sed -i "/CONFIG_GLINK_DEBUG_FS\>/d" $(1); \
-				echo "# CONFIG_GLINK_DEBUG_FS is not set" >>$(1); \
-				sed -i "/CONFIG_CNSS_QCA6290/d" $(1); \
-				echo "CONFIG_CNSS_QCA6290=y" >>$(1); \
 			fi; \
 			if [ -n "$(findstring $(_BUILD_NAME_),$(SPF11.1_MODEL_LIST) $(IPQ807X_MODEL_LIST))" ] ; then \
 				sed -i "/CONFIG_HAVE_GCC_PLUGINS\>/d" $(1); \

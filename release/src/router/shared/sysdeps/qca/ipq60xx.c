@@ -330,9 +330,15 @@ int ipq60xx_vlan_set(int vtype, char *upstream_if, int vid, int prio, unsigned i
 		eval("brctl", "addbr", brv_if);
 		eval("ifconfig", brv_if, "0.0.0.0", "up");
 
+#if 0
 		set_netdev_sysfs_param(brv_if, "bridge/multicast_querier", "1");
 		set_netdev_sysfs_param(brv_if, "bridge/multicast_snooping",
 			nvram_match("switch_br_no_snooping", "1")? "0" : "1");
+#else
+		/* should not handle the multicast on IPTV bridge */
+		set_netdev_sysfs_param(brv_if, "bridge/multicast_querier", "0");
+		set_netdev_sysfs_param(brv_if, "bridge/multicast_snooping", "0");
+#endif
 	}
 
 	if (vtype == VLAN_TYPE_WAN) {
@@ -1298,15 +1304,15 @@ void get_phy_port_mapping(phy_port_mapping *port_mapping)
 	static phy_port_mapping port_mapping_static = {
 #if defined(PLAX56_XP4)
 		.count = 2,
-		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = "eth0" },
-		.port[1] = { .phy_port_id = LAN4_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1" }
+		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = "eth0", .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN4_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1", .seq_no = -1, .ui_display = NULL }
 #else
 		.count = 5,
-		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = "eth0" },
-		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1" },
-		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1" },
-		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1" },
-		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1" }
+		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = "eth0", .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1", .seq_no = -1, .ui_display = NULL },
+		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1", .seq_no = -1, .ui_display = NULL },
+		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1", .seq_no = -1, .ui_display = NULL },
+		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = "eth1", .seq_no = -1, .ui_display = NULL }
 #endif
 	};
 

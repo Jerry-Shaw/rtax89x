@@ -220,7 +220,7 @@ var httpApi ={
 		return reult;
 	},
 
-	"nvramSet": function(postData, handler){
+	"nvramSet": function(postData, handler, async = true){
 		delete postData.isError;
 
 		$.ajax({
@@ -228,6 +228,7 @@ var httpApi ={
 			dataType: 'json',
 			data: postData,
 			type: 'POST',
+            async: async,
 			error: function(){},
 			success: function(response){
 				if(handler) handler.call(response);
@@ -424,7 +425,7 @@ var httpApi ={
 
 	"detwanGetRet": function(){
 		var wanInfo = httpApi.nvramGet(["wan0_state_t", "wan0_sbstate_t", "wan0_auxstate_t", "autodet_state", "autodet_auxstate", "wan0_proto",
-										 "link_internet", "x_Setting", "usb_modem_act_sim", "link_wan"], true);
+										 "link_internet", "x_Setting", "usb_modem_act_sim", "link_wan", "wans_dualwan", "wan1_state_t", "wan1_sbstate_t", "wan1_auxstate_t"], true);
 		var tcode = httpApi.nvramGet(["territory_code"], true).territory_code;
 
 		var sessionId = (typeof systemVariable != "undefined") ? systemVariable.qisSession : ""; 
@@ -510,7 +511,7 @@ var httpApi ={
 		else if(wanInfo.link_wan == ""){
 			retData.wanType = wanTypeList.check;
 		}
-		else if(wanInfo.link_wan == "0"){
+		else if(wanInfo.link_wan == "0" && (isSupport("gobi") || !hadPlugged("modem"))){
 			retData.wanType = wanTypeList.noWan;
 		}
 		else if(
@@ -532,17 +533,9 @@ var httpApi ={
 				retData.wanType = (iCanUsePPPoE) ? wanTypeList.pppoe : wanTypeList.dhcp;
 			}
 		}
-		else if(wanInfo.autodet_state == ""){
-			retData.wanType = wanTypeList.check;
-			if(this.detRetryCnt > 0){
-				this.detRetryCnt --;
-			}
-			else{
-				this.startAutoDet();
-				retData.isIPConflict = false;
-				retData.isError = false;
-				this.detRetryCnt = this.detRetryCnt_MAX;
-			}
+		else if(isSupport("usb_bk") && wanInfo.wans_dualwan == "wan usb" &&
+				wanInfo.link_internet == "2" && wanInfo.wan1_state_t == "2" && wanInfo.wan1_sbstate_t  == "0"){//USB tethering
+			retData.wanType = wanTypeList.connected;
 		}
 		else if(iCanUsePPPoE){
 			retData.wanType = wanTypeList.pppoe;
@@ -677,7 +670,11 @@ var httpApi ={
 			"unknow":"UNKNOW",
 			"v6plus":"V6PLUS",
 			"hgw_v6plus":"HGW_V6PLUS",
-			"ocnvc":"OCNVC"
+			"ocnvc":"OCNVC",
+			"dslite_xpass":"DSLITE_XPASS",
+			"dslite_transix":"DSLITE_TRANSIX",
+			"v6opt":"V6OPTION",
+			"hgw_v6opt":"HGW_V6OPTION"
 		}
 
 		var retData = {
@@ -710,6 +707,18 @@ var httpApi ={
 		else if(wanInfo.wan46det_state == "5"){
 			retData.wan46State = wanTypeList.ocnvc;
 		}
+		else if(wanInfo.wan46det_state == "6"){
+			retData.wan46State = wanTypeList.dslite_xpass;
+		}
+		else if(wanInfo.wan46det_state == "7"){
+			retData.wan46State = wanTypeList.dslite_transix;
+		}
+		else if(wanInfo.wan46det_state == "8"){
+			retData.wan46State = wanTypeList.v6opt;
+		}
+		else if(wanInfo.wan46det_state == "9"){
+			retData.wan46State = wanTypeList.hgw_v6opt;
+		}
 
 		return retData;
 	},
@@ -727,6 +736,8 @@ var httpApi ={
 			"map-e": "MAP-E",
 			"v6plus": "<#IPv6_plus#>",
 			"ocnvc": "<#IPv6_ocnvc#>",
+			"dslite": "DS-Lite",
+			"v6opt": "<#IPv6_opt#>",
 			"usb modem": "USB Modem"
 		};
 		var result = {
@@ -918,6 +929,115 @@ var httpApi ={
 		});
 	},
 
+	"newEula": {
+		"set": (enable, callback) => {
+			$.ajax({
+				url: '/set_ASUS_NEW_EULA.cgi',
+				data: {
+					"ASUS_NEW_EULA": enable
+				},
+				dataType: 'json',
+				success: callback
+			});
+		},
+		"get": () => {
+			return new Promise((resolve, reject) => {
+				const res = httpApi.nvramGet(["ASUS_NEW_EULA", "ASUS_NEW_EULA_time"], true)
+				resolve(res);
+			});
+		}
+	},
+
+	"privateEula": {
+		"set": function(enable, callback){
+			$.ajax({
+				url: '/set_ASUS_privacy_policy.cgi',
+				data: {
+					"ASUS_privacy_policy": enable
+				},
+				async: false,
+				dataType: 'json',
+				success: callback
+			});
+		},
+
+		"get": function(feature){
+			return new Promise((resolve, reject) =>{
+				if (feature == undefined || feature == "") feature = "ASUS_privacy_policy";
+
+				let retData = {
+					ASUS_PP: 0,
+					ASUS_PP_time: ""
+				};
+
+				$.ajax({
+					url: '/get_ASUS_privacy_policy.cgi',
+					dataType: 'json',
+					async: false,
+					success: function (resp) {
+						var ASUS_privacy_policy = resp.ASUS_privacy_policy;
+						var ASUS_privacy_policy_time = resp.ASUS_privacy_policy_time;
+
+						if (feature == "SIGNED") {
+							var securityUpdate = httpApi.securityUpdate.get()
+							var audoUpgrade = httpApi.nvramGet(["webs_update_enable"]).webs_update_enable == "1";
+
+							if (ASUS_privacy_policy == "0" && ASUS_privacy_policy_time != "") {
+								retData.ASUS_PP = "1";
+								retData.ASUS_PP_time = "";
+							} else if (
+								ASUS_privacy_policy_time == "" ||
+								ASUS_privacy_policy_time == undefined
+							) {
+								retData.ASUS_PP = "0";
+								retData.ASUS_PP_time = "";
+							} else if (
+								(ASUS_privacy_policy > "1" && resp.AHS > ASUS_privacy_policy && securityUpdate) ||
+								(ASUS_privacy_policy > "1" && resp.ASD > ASUS_privacy_policy && securityUpdate) ||
+								(ASUS_privacy_policy > "1" && resp.AUTOUPGRADE > ASUS_privacy_policy && audoUpgrade)
+							) {
+								retData.ASUS_PP = "0";
+								retData.ASUS_PP_time = ASUS_privacy_policy_time;
+							} else {
+								retData.ASUS_PP = "1";
+								retData.ASUS_PP_time = ASUS_privacy_policy_time;
+							}
+						} else {
+							retData.ASUS_PP = ASUS_privacy_policy;
+							retData.ASUS_PP_time = ASUS_privacy_policy_time;
+						}
+					}
+				});
+
+				resolve(retData);
+			});
+		}
+	},
+
+	"securityUpdate": {
+		"set": function(enable, callback){
+			$.ajax({
+				url: '/set_security_update.cgi?' + 'security_update=' + enable,
+				async: false,
+				success: callback
+			});
+		},
+
+		"get": function(){
+			var retData;
+			$.ajax({
+				url: '/get_security_update.cgi',
+				dataType: 'json',
+				async: false,
+				success: function(resp){
+					retData = resp.security_update;
+				}
+			});
+
+			return retData;
+		}
+	},
+
 	"unregisterAsusDDNS": function(callback){
 		$.ajax({
 			url: '/unreg_ASUSDDNS.cgi',
@@ -962,26 +1082,26 @@ var httpApi ={
 				"boost_led": {
 					"title": "<#BoostKey_LED#>",
 					"value": 0,
-					"text": "<#BoostKey_LED#>",
-					"desc": "<#BoostKey_LED_desc#>"
+					"text": `<#BoostKey_LED#>`,
+					"desc": `<#BoostKey_LED_desc#>`
 				},
 				"boost_dfs": {
 					"title": "<#BoostKey_DFS#>",
 					"value": 1,
-					"text": "<#WLANConfig11b_EChannel_dfs#>",
-					"desc": "<#BoostKey_DFS_desc#>"
+					"text": `<#WLANConfig11b_EChannel_dfs#>`,
+					"desc": `<#BoostKey_DFS_desc#>`
 				},
 				"boost_aura": {
 					"title": "<#BoostKey_Aura_RGB#>",
 					"value": 2,
-					"text": "<#BoostKey_Aura_RGB#>",
-					"desc": "<#BoostKey_Aura_RGB_desc#>"
+					"text": `<#BoostKey_Aura_RGB#>`,
+					"desc": `<#BoostKey_Aura_RGB_desc#>`
 				},
 				"boost_qos": {
 					"title": "<#BoostKey_Boost#>",
 					"value": 3,
-					"text": "<#BoostKey_enable#>",
-					"desc": "<#BoostKey_Boost_desc#>"
+					"text": `<#BoostKey_enable#>`,
+					"desc": `<#BoostKey_Boost_desc#>`
 				}
 		};
 
@@ -1438,6 +1558,7 @@ var httpApi ={
 				{type:"MOBILE", bit:8},
 				{type:"WANLAN", bit:9},
 				{type:"MOCA", bit:10},
+				{type:"WANAUTO", bit:12},
 				{type:"IPTV_BRIDGE", bit:26},
 				{type:"IPTV_VOIP", bit:27},
 				{type:"IPTV_STB", bit:28},
@@ -1480,8 +1601,7 @@ var httpApi ={
 		var rate_map_USB = [
 			{value:"480",text:"USB2.0"},
 			{value:"5000",text:"USB3.0"},
-			{value:"10000",text:"USB3.1"},
-			{value:"20000",text:"USB3.2"}
+			{value:"10000",text:"USB3.2"}
 		];
 		httpApi.get_port_status(mac, function(response){
 			var response_temp = JSON.parse(JSON.stringify(response));
@@ -1497,7 +1617,7 @@ var httpApi ={
 						data["label_priority"] = ((label == "W") ? 1 : ((label == "L") ? 2 : 3));
 						data["label_idx"] = label_idx;
 						data["label_port_name"] = (function(){
-							if(data.cap_support.WAN){
+							if(data.cap_support.WAN || data.cap_support.WANAUTO){
 								if(label_idx == "0")
 									return "WAN";
 								else
@@ -1563,7 +1683,7 @@ var httpApi ={
 									data["special_port_name"] = (data.is_on == "1") ? "USB Modem" : max_rate_data.text;
 								}
 								else{
-									var max_rate_value = parseInt(max_rate_data.value);
+									const max_rate_value = parseInt(max_rate_data.value);
 									if(max_rate_value > 1000){
 										data["special_port_name"] = max_rate_data.text.replace(" Gbps", "");
 										if(max_rate_value == 10000){
@@ -1748,7 +1868,8 @@ var httpApi ={
 					"wifi_radio_0" : {"bit" : 0}, //2G
 					"wifi_radio_1" : {"bit" : 1}, //5G or 5G-1
 					"wifi_radio_2" : {"bit" : 2}, //5G-2
-					"wifi_radio_3" : {"bit" : 3}  //6G
+					"wifi_radio_3" : {"bit" : 3}, //6G or 6G-1
+					"wifi_radio_4" : {"bit" : 4}  //6G-2
 				}
 			},
 			"conn_eap_mode" : {
@@ -2003,7 +2124,7 @@ var httpApi ={
 			if(typeof window.localStorage[key] !== "function" && key !== "length"){
 				logContentArray.push([key, window.localStorage[key]])
 			}
-		};
+		}
 
 		logContentArray.sort(function(a, b){
 			return a[0] - b[0];
@@ -2160,3 +2281,4 @@ var httpApi ={
 		}
 	}
 }
+

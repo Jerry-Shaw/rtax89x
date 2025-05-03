@@ -119,6 +119,9 @@ extern int get_folder_list(const char *const mount_path, int *sh_num, char ***fo
 	char *list_file, *list_info;
 	char *follow_info, *follow_info_end, backup;
 	
+	if (folder_list)
+		*folder_list = NULL;
+
 	// 1. get list file
 	len = strlen(mount_path)+strlen("/.__folder_list.txt");
 	list_file = (char *)malloc(sizeof(char)*(len+1));

@@ -505,8 +505,10 @@ page_default_redirect(int fromapp_flag, char* url)
 {
 	char inviteCode[256]={0};
 
-	if(check_xss_blacklist(url, 1))
+	if(check_xss_blacklist(url, 1)){
 		strncpy(login_url, indexpage, sizeof(login_url));
+		url = indexpage;
+	}
 	else
 		strncpy(login_url, url, sizeof(login_url));
 
@@ -556,7 +558,7 @@ send_login_page(int fromapp_flag, int error_status, char* url, char* file, int l
 	}else{
 		snprintf(inviteCode, sizeof(inviteCode), "\"error_status\":\"%d\", \"captcha_on\":\"%d\", \"last_time_lock_warning\":\"%d\"", error_status, captcha_on(), last_time_lock_warning());
 		if(error_status == LOGINLOCK){
-			snprintf(buf, sizeof(buf), ",\"remaining_lock_time\":\"%ld\"", max_lock_time - login_dt);
+			snprintf(buf, sizeof(buf), ",\"remaining_lock_time\":\"%ld\",\"lock_version\":\"%d\"", max_lock_time - login_dt, HTTPD_LOCK_VERSION);
 			strlcat(inviteCode, buf, sizeof(inviteCode));
 		}
 	}
@@ -1601,6 +1603,8 @@ handle_request(void)
 #if defined(RTCONFIG_IFTTT) || defined(RTCONFIG_ALEXA) || defined(RTCONFIG_GOOGLE_ASST)
 					&& !strstr(file, "asustitle.png")
 #endif
+					&& !strstr(file,"cert.crt")
+					&& !strstr(file,"cacert_key.tar")
 					&& !strstr(file,"cert_key.tar")
 					&& !strstr(file,"cert.tar")
 #ifdef RTCONFIG_OPENVPN
@@ -1646,7 +1650,7 @@ handle_request(void)
 				if(!fromapp) set_referer_host();
 				send_token_headers( 200, "OK", handler->extra_header, handler->mime_type, fromapp);
 
-			}else if(strncmp(url, "login.cgi", strlen(url))!=0){
+			}else if(strcmp(file, "login.cgi") && strcmp(file, "login_v2.cgi")){
 				send_headers( 200, "OK", handler->extra_header, handler->mime_type, fromapp);
 			}
 			if (strcasecmp(method, "head") != 0 && handler->output) {
@@ -1913,19 +1917,17 @@ void http_logout(uaddr *uip, char *cookies, int fromapp_flag)
 		nvram_set("login_ip", ""); /* IPv6 compat */
 		nvram_set("login_ip_str", "");
 		nvram_set("login_timestamp", "");
-		memset(referer_host, 0, sizeof(referer_host));
+		//memset(referer_host, 0, sizeof(referer_host));
 		delete_logout_from_list(cookies);
-// 2008.03 James. {
+
 		if (change_passwd == 1) {
 			change_passwd = 0;
 		}
-// 2008.03 James. }
+
 	}else if(fromapp_flag != 0){
 		delete_logout_from_list(cookies);
+	}
 }
-}
-//2008 magic}
-//
 
 int is_firsttime(void)
 {
@@ -2380,8 +2382,10 @@ void check_alive()
 		app_temp_ip_addr.s_addr = app_login_ip;
 		temp_ip_addr.s_addr = login_ip_tmp;
 		//dbg("slow_post_read_count(%d) > 3\n", slow_post_read_count);
+#ifdef RTCONFIG_LIBASUSLOG
 		HTTPD_FB_DEBUG("login_ip = %s(%lu), app_login_ip = %s(%lu)\n", inet_ntoa(ip_addr), login_ip, inet_ntoa(app_temp_ip_addr), app_login_ip);
 		HTTPD_FB_DEBUG("login_ip_tmp = %s(%lu), url = %s\n", inet_ntoa(temp_ip_addr), login_ip_tmp, url);
+#endif
 		logmessage("HTTPD", "waitting 10 minitues and restart\n");
 		check_lock_state();
 		notify_rc("restart_httpd");
@@ -2617,14 +2621,16 @@ reload_cert:
 			continue;
 #ifdef RTCONFIG_HTTPS
 		if (do_ssl) {
-			if (
+			int reload_cert = 0;
 #if defined(RTCONFIG_IPV6)
-			    (!http_ipv6_only && nvram_match("httpds_reload_cert", "1"))
-			 || (http_ipv6_only && nvram_match("httpds6_reload_cert", "1"))
-#else
-			    (nvram_match("httpds_reload_cert", "1"))
+			if (http_ipv6_only)
+				reload_cert = nvram_get_int("httpds6_reload_cert");
+			else
 #endif
-			) {
+				reload_cert = nvram_get_int("httpds_reload_cert");
+
+			if (reload_cert == 1
+			 || (reload_cert == 2 && *nvram_safe_get("login_ip") == '\0')) {
 				mssl_ctx_free();
 				goto reload_cert;
 			}
@@ -2861,4 +2867,3 @@ int check_current_ip_is_lan_or_wan()
 
 	return -1;
 }
-

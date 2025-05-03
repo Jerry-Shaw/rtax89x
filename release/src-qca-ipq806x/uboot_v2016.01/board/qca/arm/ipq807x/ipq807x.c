@@ -438,6 +438,45 @@ void reset_cpu(unsigned long a)
 	while(1);
 }
 
+
+int sdx65_attached(void);
+
+int get_ap2mdm_gpio(void)
+{
+	int ap2mdm_gpio = -1, node;
+
+	node = fdt_path_offset(gd->fdt_blob, "/sdx-gpio");
+	if (node >= 0) {
+		if(sdx65_attached())
+			ap2mdm_gpio = fdtdec_get_uint(gd->fdt_blob, node, "x65-ap2mdm", -1);
+		else
+			ap2mdm_gpio = fdtdec_get_uint(gd->fdt_blob, node, "x55-ap2mdm", -1);
+	} else
+		return node;
+
+	return ap2mdm_gpio;
+}
+
+void indicate_sdx_device(void)
+{
+	int ap2mdm_gpio;
+	unsigned int *ap2mdm_gpio_base;
+
+	unsigned int machid = gd->bd->bi_arch_number;
+	if (machid != 0x08010400)
+		return;
+
+	ap2mdm_gpio = get_ap2mdm_gpio();
+	if(ap2mdm_gpio >= 0) {
+		/* Enabling OE in gpio cfg reg */
+		ap2mdm_gpio_base = (unsigned int *)GPIO_CONFIG_ADDR(ap2mdm_gpio);
+		writel(0x2c0, ap2mdm_gpio_base);
+		/* Indicate SDx by writing low to ap2mdm */
+		gpio_set_value(ap2mdm_gpio, 0x0);
+	}
+
+}
+
 void reset_board(void)
 {
 	run_command("reset", 0);
@@ -939,6 +978,7 @@ void board_pci_init(int id)
 		pcie_v2_clock_init(id);
 	else
 		pcie_clock_init(id);
+
 	return;
 }
 
@@ -1003,6 +1043,37 @@ void board_pci_deinit(void)
 	return ;
 }
 #endif
+
+int sdx65_attached(void)
+{
+	const char *sdx65_env = getenv("x65_attached");
+	int sdx65_available = 0;
+
+	if (sdx65_env != NULL && strncmp(sdx65_env, "1", sizeof("1")) == 0) {
+		printf("sdx65_attached env is set to 1\n");
+		sdx65_available = 1;
+		return sdx65_available;
+	}
+
+	return sdx65_available;
+}
+
+void fdt_fixup_sdx65_gpio(void *blob)
+{
+	unsigned int machid = gd->bd->bi_arch_number;
+	if (machid != 0x08010400)
+		return;
+
+	if (sdx65_attached() == 0)
+		return;
+
+	parse_fdt_fixup("/soc/pci@20000000/%add%x65_attached", blob);
+	parse_fdt_fixup("/soc/pci@20000000/%x65_attached%1", blob);
+	parse_fdt_fixup("/soc/pci@20000000/pcie0_rp/qcom,mhi@0/%mdm2ap%21", blob);
+	parse_fdt_fixup("/soc/pci@20000000/pcie0_rp/qcom,mhi@0/%ap2mdm%45", blob);
+	parse_fdt_fixup("/soc/pinctrl@1000000/ap2mdm_status/%pins%?gpio45", blob);
+	parse_fdt_fixup("/soc/pinctrl@1000000/mdm2ap_e911_status/%pins%?gpio22", blob);
+}
 
 #ifdef CONFIG_USB_XHCI_IPQ
 void board_usb_deinit(int id)

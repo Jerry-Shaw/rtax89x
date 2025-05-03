@@ -68,12 +68,12 @@
 	font:13px Arial, Helvetica, sans-serif;
 }
 </style>
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script language="JavaScript" type="text/javascript" src="/state.js"></script>
 <script language="JavaScript" type="text/javascript" src="/help.js"></script>
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
 <script language="JavaScript" type="text/javascript" src="/validator.js"></script>
-<script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <script type="text/javascript" language="JavaScript" src="/js/table/table.js"></script>
 <script type="text/javascript" src="/js/httpApi.js"></script>
@@ -248,7 +248,7 @@ function initial(){
 			$("#wans_lanport2 option[value='4']").remove();
 	}
 
-	if(based_modelid == "RT-AC95U" || based_modelid == "RT-AX95Q" || based_modelid == "XT8PRO" || based_modelid == "XT8_V2" || based_modelid == "RT-AXE95Q" || based_modelid == "ET8PRO" || based_modelid == "ET8_V2" || based_modelid == "RT-AX82_XD6" || based_modelid == "RT-AX82_XD6S" || based_modelid == "XD4S" || based_modelid == "RT-AX53U" || based_modelid == "RT-AX59U" || based_modelid == "XD6_V2"){
+	if(based_modelid == "RT-AC95U" || based_modelid == "RT-AX95Q" || based_modelid == "XT8PRO" || based_modelid == "XT8_V2" || based_modelid == "RT-AXE95Q" || based_modelid == "ET8PRO" || based_modelid == "ET8_V2" || based_modelid == "RT-AX82_XD6" || based_modelid == "RT-AX82_XD6S" || based_modelid == "XD4S" || based_modelid == "RT-AX53U" || based_modelid == "RT-AX59U" || based_modelid == "XD6_V2" || based_modelid == "RT-AX52"){
 		if($("#wans_lanport1 option[value='4']").length > 0)
 			$("#wans_lanport1 option[value='4']").remove();
 
@@ -743,7 +743,9 @@ function applyRule(){
 					return false;
 
 			if(wans_mode_orig != "lb" && check_bwdpi_engine_status()) {
-				var confirm_flag = confirm("<#dualwan_lb_dpi_conflict#>");
+				var confirm_str_lb_dpi_conflict = `<#dualwan_lb_dpi_conflict_new#>`;
+				confirm_str_lb_dpi_conflict = confirm_str_lb_dpi_conflict.replace('%@', `<#AiProtection_title#>`);	
+				var confirm_flag = confirm(confirm_str_lb_dpi_conflict);
 				if(confirm_flag) {
 					document.form.action_script.value = "dpi_disable;reboot;";
 				}
@@ -1950,13 +1952,13 @@ function remain_origins(){
 											</td>
 									  	</tr>
 										<tr id="usb_tethering_tr" style="display: none;">
-											<th>Auto USB Backup WAN</th><!--untranslated-->
+											<th><#dualwan_usb_backup#></th>
 											<td>
 												<div id="usb_tethering_setting" style="display: none;">
 													<input type="radio" name="wans_usb_bk" class="input" value="1" <% nvram_match("wans_usb_bk", "1", "checked"); %>><#checkbox_Yes#>
 													<input type="radio" name="wans_usb_bk" class="input" value="0" <% nvram_match("wans_usb_bk", "0", "checked"); %>><#checkbox_No#>
 												</div>
-												<span id="usb_tethering_hint" style="display: none;">By switching to USB as primary WAN, Auto USB Backup WAN will not be available.</span>
+												<span id="usb_tethering_hint" style="display: none;"><#dualwan_usb_backup_hint#></span>
 											</td>
 										</tr>
 										<tr id="wans_mode_tr">

@@ -446,6 +446,7 @@
 					phy_address = <30>;
 					phy_i2c_address = <30>;
 					phy-i2c-mode; /*i2c access phy */
+					media-type = "sfp"; /* fiber mode */
 				};
 
 				/* PCB R1.00 ~ R4.20, AQR107/AQR113 A1,B0 */

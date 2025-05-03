@@ -19,10 +19,11 @@
 <script type="text/javascript" src="/general.js"></script>
 <script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/client_function.js"></script>
+<script type="text/javascript" src="/calendar/jquery-ui.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <script type="text/javascript" src="/form.js"></script>
 <script type="text/javascript" src="/js/httpApi.js"></script>
-<script language="JavaScript" type="text/javascript" src="/js/asus_eula.js"></script>
+<script language="JavaScript" type="text/javascript" src="/js/asus_policy.js"></script>
 <style type="text/css">
 .appIcons{
 	width:36px;
@@ -1217,6 +1218,36 @@ function cancel(){
 		$('#iphone_switch').animate({backgroundPosition: -37}, "slow", function() {});
 	}
 }
+
+function switch_control(_status){
+	if(_status) {
+        if(!dns_dpi_support){
+            if(reset_wan_to_fo.check_status()) {
+                if(policy_status.TM == 0 || policy_status.TM_time == ''){
+                    const policyModal = new PolicyModalComponent({
+                        policy: "TM",
+                        agreeCallback: eula_confirm,
+                        disagreeCallback: cancel
+                    });
+                    policyModal.show();
+                }else{
+                    eula_confirm();
+                }
+            }else
+                cancel();
+        }else {
+            document.form.apps_analysis.value = 1;
+            document.form.dns_dpi_apps_analysis.value = 1;
+            applyRule();
+        }
+	}
+	else {
+		document.form.apps_analysis.value = 0;
+		if(dns_dpi_support)
+			document.form.dns_dpi_apps_analysis.value = 0;
+		applyRule();
+	}
+}
 </script>
 </head>
 
@@ -1281,19 +1312,25 @@ function cancel(){
 														<td >
 															<div align="center" class="left" style="width:94px; float:left; cursor:pointer;" id="apps_analysis_enable"></div>
 															<script type="text/javascript">
-																$('#apps_analysis_enable').iphoneSwitch('<% nvram_get("apps_analysis"); %>',
+                              if(dns_dpi_support)
+                              {  
+																$('#apps_analysis_enable').iphoneSwitch('<% nvram_get("dns_dpi_apps_analysis"); %>',
 																	function(){
-																		ASUS_EULA.config(eula_confirm, cancel);
-																		document.form._flag.value = "apps_analysis";
-
-																		if(ASUS_EULA.check("tm")){
-																			eula_confirm()
-																		}
-																	},
+                                                                        switch_control(1);
+                                                                    },
+                                                                    function(){
+                                                                        switch_control(0);
+                                                                    }
+																);
+                              } else 
+                              {
+                                                                $('#apps_analysis_enable').iphoneSwitch('<% nvram_get("apps_analysis"); %>',
 																	function(){
-																		document.form.apps_analysis.value = 0;
-																		applyRule();
-																	}
+                                                                        switch_control(1);
+                                                                    },
+                                                                    function(){
+                                                                        switch_control(0);
+                                                                    }
 																);
 															</script>
 														</td>
@@ -1352,12 +1389,16 @@ function cancel(){
 													<script type="text/javascript">
 														$('#radio_gameBoost_enable').iphoneSwitch(enable_GameBoost,
 															function(){
-																ASUS_EULA.config(eula_confirm, cancel);
 																document.form._flag.value = "game";
-
-																if(ASUS_EULA.check("tm")){
-																	eula_confirm();
-																}
+                                                                if(policy_status.TM == 0 || policy_status.TM_time == ''){
+                                                                    const policyModal = new PolicyModalComponent({
+                                                                        policy: "TM",
+                                                                        agreeCallback: eula_confirm,
+                                                                    });
+                                                                    policyModal.show();
+                                                                }else{
+                                                                    eula_confirm();
+                                                                }
 															},
 															function(){
 																document.form.qos_enable.value = '0';

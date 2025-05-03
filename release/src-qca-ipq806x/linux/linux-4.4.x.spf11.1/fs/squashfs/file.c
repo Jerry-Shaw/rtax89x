@@ -458,6 +458,8 @@ static int squashfs_readpage(struct file *file, struct page *page)
 	int file_end = i_size_read(inode) >> msblk->block_log;
 	int res;
 	void *pageaddr;
+	struct dentry *dentry = NULL;
+	struct qstr *q = NULL;
 
 	TRACE("Entered squashfs_readpage, page index %lx, start block %llx\n",
 				page->index, squashfs_i(inode)->start);
@@ -482,6 +484,13 @@ static int squashfs_readpage(struct file *file, struct page *page)
 
 	if (!res)
 		return 0;
+
+	dentry = file->f_path.dentry;
+	if (dentry)
+		q = &(dentry->d_name);
+	printk("%s: res %d, dentry (d_iname %s d_name %s)\n", __func__, res,
+		dentry? (char*) dentry->d_iname : "NULL",
+		q? (char*) q->name : "NULL");
 
 error_out:
 	SetPageError(page);

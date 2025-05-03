@@ -1164,7 +1164,18 @@ static void config_mt7621_esw_LANWANPartition(int type)
 void __wgn_sysdep_swtich_set(int vid)
 {
 	char portmap[16];
-	build_wan_lan_mask(0);
+	int stb = 0;
+
+	if(nvram_get_int("switch_stb_x") > 0){
+		stb = nvram_get_int("switch_stb_x");
+#if defined(RTCONFIG_3LANPORT_DEVICE)
+		if(stb == 4)
+			stb = 3;
+#endif
+	}
+	else
+		stb = 0;
+	build_wan_lan_mask(stb);
 
 	for(int i=0; i<7; i++)
 	{
@@ -1199,7 +1210,17 @@ void __wgn_sysdep_swtich_set(int vid)
 
 void __wgn_sysdep_swtich_unset(int vid)
 {
-	build_wan_lan_mask(0);
+	int stb = 0;
+	if(nvram_get_int("switch_stb_x") > 0){
+		stb = nvram_get_int("switch_stb_x");
+#if defined(RTCONFIG_3LANPORT_DEVICE)
+		if(stb == 4)
+			stb = 3;
+#endif
+	}
+	else
+		stb = 0;
+	build_wan_lan_mask(stb);
 
 	for(int i=0; i<7; i++)
 	{

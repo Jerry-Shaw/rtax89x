@@ -11,7 +11,11 @@
 #include <string.h>
 #include <getopt.h>
 #include "../include/ebtables_u.h"
+#if defined(__GLIBC__) || defined(__UCLIBC__)
 #include <netinet/ether.h>
+#else
+extern struct ether_addr *ether_aton (const char *__asc) __THROW;
+#endif
 #include <linux/netfilter_bridge/ebt_nat.h>
 
 static int to_source_supplied, to_dest_supplied;

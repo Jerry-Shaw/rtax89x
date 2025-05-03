@@ -285,7 +285,7 @@ static char* get_operations_symbol(operation_type_e operation_type)
 static int is_valid_text(const char* input) 
 {
 	int i,len;
-	char whitelist[] = ":.-,=/_ []()%";
+	char whitelist[] = ":.-,=/_ []()%|";
 	char tmp[2] = {0};
 	
 	if(!input) {
@@ -360,7 +360,7 @@ static int is_valid_text_ipv4(const char *input)
 		return FORMAT_ERROR;
 	}
 
-  	char str[31], temp[31];
+	char temp[31];
 	int a, b, c, d;
 
 	//- ipv4 format 
@@ -399,7 +399,7 @@ static int is_valid_text_ipv6(const char *input)
 		ns_int16sz   = 2
 	};
 
-	const char *curtok;
+	const char *curtok __attribute__((unused));
 	int tp;
 	const char *colonp;
 	int saw_xdigit;
@@ -2927,7 +2927,8 @@ int cosql_backup_and_resize_table_by_reserved_count(sqlite3* src_pdb, sqlite3* d
 }
 ////////////////////////////////////////////////////////////////////////////////////
 
-int cosql_free_query_columns(sql_column_prototype_t* query_columns, int query_columns_count) {
+int cosql_free_query_columns(sql_column_prototype_t* query_columns, int query_columns_count)
+{
 
 	int i = 0;
 
@@ -2951,7 +2952,8 @@ int cosql_free_query_columns(sql_column_prototype_t* query_columns, int query_co
 	return COSQL_OK;
 }
 
-int cosql_free_match_columns(sql_column_match_t* match_columns, int match_columns_count) {
+int cosql_free_match_columns(sql_column_match_t* match_columns, int match_columns_count)
+{
 	
 	int i = 0;
 

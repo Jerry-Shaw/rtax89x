@@ -444,7 +444,6 @@ int main(int argc, char *argv[])
 		get_wgsc_subnet(wgsc_subnet, sizeof(wgsc_subnet));
 #endif
 	}
-//#endif
 	if(nvram_invmatch("re_mode", "1"))
 	{
 		fprintf(fp, "hosts allow = 127.0.0.1 %s/%s", nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"));
@@ -486,7 +485,7 @@ int main(int argc, char *argv[])
 	fprintf(fp, "map hidden = no\n");
 	fprintf(fp, "map read only = no\n");
 	fprintf(fp, "map system = no\n");
-#ifdef RTCONFIG_SAMBA36X || defined(RTCONFIG_SAMBA4)
+#if defined(RTCONFIG_SAMBA36X) || defined(RTCONFIG_SAMBA4)
 	fprintf(fp, "store dos attributes = no\n");
 #else
 	fprintf(fp, "store dos attributes = yes\n");

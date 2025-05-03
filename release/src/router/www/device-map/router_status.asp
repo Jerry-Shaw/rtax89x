@@ -28,6 +28,8 @@ var ram_usage_array = new Array();
 var color_table = ["#c6dafc", "#7baaf7", "#4285f4", "#3367d6"];
 var led_table = ["<#btn_disable#>", "<#Priority_Level_3#>", "<#Medium#>", "<#High#>"];
 $(document).ready(function(){
+	const get_header_info = httpApi.hookGet("get_header_info");
+	window.parent.postMessage('router_status.asp', `${get_header_info.protocol}://${get_header_info.host}:${get_header_info.port}`);
 	if(system.INTELplatform){
 		register_event();
 		var ledLv = httpApi.nvramGet(["bc_ledLv"]).bc_ledLv;
@@ -183,7 +185,7 @@ function genElement(){
 }
 
 function register_event(){
-	$(function() {
+
 		$( "#slider" ).slider({
 			orientation: "horizontal",
 			range: "min",
@@ -199,7 +201,7 @@ function register_event(){
 				set_led(ui.value);	  
 			}
 		}); 
-	});
+
 }
 
 function set_led(value){
@@ -416,10 +418,16 @@ function get_ethernet_ports() {
 
 				var $error_port_list_bg = $("<div>").appendTo($hint_text_bg);
 				$.each(_error_port_list, function(index, port_item){
-					var display_name = ((port_item.special_port_name == "") ? port_item.label_port_name : port_item.special_port_name);
+					let port_text = "";
+					if(port_item.ui_display != undefined && port_item.ui_display != ""){
+						port_text = port_item.ui_display;
+					}
+					else{
+						port_text = port_item.special_port_name + " (" + port_item.label_port_name + ")";
+					}
 					var $port_item = $("<div>").css({"display":"flex", "flex-wrap":"nowrap", "align-items":"baseline"}).appendTo($error_port_list_bg);
 					$("<div>").css({"width":"12px", "height":"12px", "background":"#ECC000", "margin":"0 6px 0 10px"}).appendTo($port_item);
-					$("<div>").html(htmlEnDeCode.htmlEncode(display_name)).appendTo($port_item);
+					$("<div>").html(htmlEnDeCode.htmlEncode(port_text)).appendTo($port_item);
 				});
 				$("<div>").css({"background":"rgb(255 255 255 / 20%)", "height":"1px", "margin":"10px 0"}).appendTo($hint_text_bg);
 				$("<div>").css({"margin-bottom":"6px"}).html("<#Things_To_Check#> :").appendTo($hint_text_bg);
@@ -487,21 +495,50 @@ function get_ethernet_ports() {
 								$port_icon.addClass("unplug");
 						}
 
-						if(port_item.cap_support.WAN){
+						if(port_item.cap_support.WAN || port_item.cap_support.WANAUTO){
 							$("<div>").addClass("wan_icon").appendTo($port_icon);
-							if(port_item.special_port_name != "")
-								$("<span>").addClass("port_text").html(htmlEnDeCode.htmlEncode(port_item.special_port_name)).appendTo($port_bg);
+							let port_text = "";
+							if(port_item.ui_display != undefined && port_item.ui_display != ""){
+								port_text = port_item.ui_display;
+							}
+							else{
+								if(port_item.special_port_name != ""){
+									port_text = port_item.special_port_name;
+								}
+							}
+							if(port_text != "")
+								$("<span>").addClass("port_text").html(htmlEnDeCode.htmlEncode(port_text)).appendTo($port_bg);
 						}
 						else if(port_item.cap_support.LAN){
-							if(port_item.special_port_name != "")
-								$("<span>").addClass("port_text").html(htmlEnDeCode.htmlEncode(port_item.special_port_name)).appendTo($port_bg);
-							else
-								$("<div>").addClass("lan_idx").html(htmlEnDeCode.htmlEncode(port_item.label_idx)).appendTo($port_icon);
+							let port_text = "";
+							let port_idx = "";
+							if(port_item.ui_display != undefined && port_item.ui_display != ""){
+								port_text = port_item.ui_display;
+							}
+							else{
+								if(port_item.special_port_name != ""){
+									port_text = port_item.special_port_name;
+								}
+								port_idx = port_item.label_idx;
+							}
+							if(port_text != "")
+								$("<span>").addClass("port_text").html(htmlEnDeCode.htmlEncode(port_text)).appendTo($port_bg);
+							if(port_idx != "")
+								$("<div>").addClass("lan_idx").html(htmlEnDeCode.htmlEncode(port_idx)).appendTo($port_icon);
 						}
 						else if(port_item.cap_support.USB){
 							$port_icon.addClass("USB");
-							if(port_item.special_port_name != "")
-								$("<span>").addClass("port_text").html(htmlEnDeCode.htmlEncode(port_item.special_port_name)).appendTo($port_bg);
+							let port_text = "";
+							if(port_item.ui_display != undefined && port_item.ui_display != ""){
+								port_text = port_item.ui_display;
+							}
+							else{
+								if(port_item.special_port_name != ""){
+									port_text = port_item.special_port_name;
+								}
+							}
+							if(port_text != "")
+								$("<span>").addClass("port_text").html(htmlEnDeCode.htmlEncode(port_text)).appendTo($port_bg);
 						}
 						else if(port_item.cap_support.MOCA){
 							$port_icon.addClass("MoCa");

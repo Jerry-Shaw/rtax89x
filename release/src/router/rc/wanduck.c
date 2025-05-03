@@ -32,13 +32,8 @@ static int wdbg = 0;
 
 #define _wdbg(fmt, args...) do { if (wdbg) { dbg(fmt, ## args); }; } while (0)
 
-#if defined(RTCONFIG_WANRED_LED)
-#if defined(RTCONFIG_WANLEDX2)
-#if !defined(RTCONFIG_RALINK)
+#if defined(RTCONFIG_WANRED_LED) && defined(RTCONFIG_WANLEDX2)
 static int update_wan_led_and_wanred_led(int wan_unit)
-#else	// !RTCONFIG_RALINK
-int update_wan_led_and_wanred_led(int wan_unit)
-#endif	// !RTCONFIG_RALINK
 {
 	/* e.g. BRT-AC828: WAN WHITE/RED LED x 2, RTCONFIG_DUALWAN must be enabled. */
 	int mode = sw_mode, l = link_wan[wan_unit], state;
@@ -125,94 +120,7 @@ int update_wan_led_and_wanred_led(int wan_unit)
 
 	return 0;
 }
-#else	/* !RTCONFIG_WANLEDX2 */
-#if !defined(RTCONFIG_RALINK)
-static int update_wan_led_and_wanred_led(int wan_unit)
-#else	// !RTCONFIG_RALINK
-int update_wan_led_and_wanred_led(int wan_unit)
-#endif	// !RTCONFIG_RALINK	
-{
-	/* e.g. RT-AC55U: WAN BLUE/RED LED */
-	int mode = sw_mode, l = link_wan[wan_unit], state;
-	char s[] = "wanX_state_tXXX";
-
-	if (wan_unit < 0 || wan_unit >= WAN_UNIT_MAX)
-		return -1;
-
-	if (mode < SW_MODE_ROUTER || mode > SW_MODE_HOTSPOT)
-		mode = sw_mode();
-	/* Turn on/off WAN BLUE/RED LED in accordance with wan status. */
-	switch (mode) {
-	case SW_MODE_ROUTER:
-#if defined(RTCONFIG_DUALWAN)
-		if (!strcmp(dualwan_mode, "lb")) {
-			int u, onoff = 0;
-
-			/* Turn on WAN BLUE LED if any WAN unit is connected in load-balanced mode. */
-			for (u = WAN_UNIT_FIRST; !onoff && u < WAN_UNIT_MAX; ++u) {
-				snprintf(s, sizeof(s), "wan%d_state_t", u);
-				state = nvram_get_int(s);
-				l = link_wan[u];
-				if (dualwan_unit__nonusbif(u))
-					l = get_wanports_status(u);
-
-				if (l == CONNED && state == WAN_STATE_CONNECTED)
-					onoff++;
-			}
-
-			if (!inhibit_led_on()) {
-				if (onoff) {
-					wan_red_led_control(LED_OFF);
-					led_control(LED_WAN, LED_ON);
-				} else {
-					wan_red_led_control(LED_ON);
-					led_control(LED_WAN, LED_OFF);
-				}
-			} else {
-				wan_red_led_control(LED_OFF);
-				led_control(LED_WAN, LED_OFF);
-			}
-		} else
-#endif
-		{
-			if (wan_primary_ifunit() != wan_unit)
-				return 0;
-
-			snprintf(s, sizeof(s), "wan%d_state_t", wan_unit);
-			state = nvram_get_int(s);
-			if (dualwan_unit__nonusbif(wan_unit))
-				l = get_wanports_status(wan_unit);
-
-			if (!inhibit_led_on()) {
-				if (l == CONNED && state == WAN_STATE_CONNECTED) {
-					wan_red_led_control(LED_OFF);
-					led_control(LED_WAN, LED_ON);
-				} else {
-					wan_red_led_control(LED_ON);
-					led_control(LED_WAN, LED_OFF);
-				}
-			} else {
-				wan_red_led_control(LED_OFF);
-				led_control(LED_WAN, LED_OFF);
-			}
-		}
-		break;
-	case SW_MODE_REPEATER:	/* fallthrough */
-	case SW_MODE_AP:
-		wan_red_led_control(LED_OFF);
-		break;
-	}
-
-	return 0;
-}
-#endif
-#else	/* !RTCONFIG_WANRED_LED */
-#if !defined(RTCONFIG_RALINK)
-static inline int update_wan_led_and_wanred_led(int wan_unit) { return 0; }
-#else	// !RTCONFIG_RALINK
-int update_wan_led_and_wanred_led(int wan_unit) { return 0; }
-#endif	// !RTCONFIG_RALINK
-#endif	/* RTCONFIG_WANRED_LED */
+#endif	/* RTCONFIG_WANRED_LED & RTCONFIG_WANLEDX2 */
 
 void set_link_internet(int wan_unit, int link_internet){
 #if !defined(RTCONFIG_WANLEDX2)
@@ -257,30 +165,43 @@ int update_failover_led(void)
 }
 #endif
 
-#if !defined(RTCONFIG_RALINK)
 int update_wan_leds(int wan_unit, int link_wan_unit)
 {
-#if defined(RTCONFIG_WANRED_LED)
+#if defined(RTCONFIG_WANRED_LED) && defined(RTCONFIG_WANLEDX2)
 	if (!inhibit_led_on())
 		update_wan_led_and_wanred_led(wan_unit);
 
-#else	/* !RTCONFIG_WANRED_LED */
+#else	/* !(RTCONFIG_WANRED_LED & RTCONFIG_WANLEDX2) */
+	int mode = sw_mode();
 	int link_internet = nvram_get_int("link_internet");
 
-	/* Turn on/off WAN LED in accordance with link status of WAN port */
-	if (link_wan_unit && !inhibit_led_on()) {
-#if defined(RT4GAC86U)
-		if(link_internet == 2)
-			led_control(LED_WAN, LED_ON);
-		else led_control(LED_WAN, LED_OFF);
-#else
-		led_control(LED_WAN, LED_ON);
-#endif
-	} else {
-		if(link_internet != 2)
+	switch (mode) {
+	case SW_MODE_ROUTER:
+		if (!nvram_get_int("x_Setting")) {
+			wan_red_led_control(LED_ON);
 			led_control(LED_WAN, LED_OFF);
+		}
+		else if (!inhibit_led_on()) {
+			if (link_internet == 2) {
+				wan_red_led_control(LED_OFF);
+				led_control(LED_WAN, LED_ON);
+			}
+			else {
+				wan_red_led_control(LED_ON);
+				led_control(LED_WAN, LED_OFF);
+			}
+		}
+		else {
+			wan_red_led_control(LED_OFF);
+			led_control(LED_WAN, LED_OFF);
+		}
+		break;
+	case SW_MODE_REPEATER:	/* fallthrough */
+	case SW_MODE_AP:
+		wan_red_led_control(LED_OFF);
+		break;
 	}
-#endif	/* RTCONFIG_WANRED_LED */
+#endif	/* RTCONFIG_WANRED_LED & RTCONFIG_WANLEDX2 */
 
 #if defined(RTCONFIG_FAILOVER_LED)
 	update_failover_led();
@@ -288,18 +209,15 @@ int update_wan_leds(int wan_unit, int link_wan_unit)
 
 	return 0;
 }
-#endif	// !RTCONFIG_RALINK
 #endif	/* RTCONFIG_LANWAN_LED */
 
 #ifdef RTCONFIG_QCA
 void sw_led_ctrl(void)
 {
 #if defined(GTAXY16000) || defined(RTAX89U)
-#if !defined(RAX120)
 	if (is_aqr_phy_exist())
 		r10g_led_control((!inhibit_led_on() && ethtool_glink("eth5") > 0)? LED_ON : LED_OFF);
 	sfpp_led_control((!inhibit_led_on() && ethtool_glink("eth4") > 0)? LED_ON : LED_OFF);
-#endif
 #endif
 }
 #endif
@@ -5160,4 +5078,3 @@ WANDUCK_SELECT:
 	_dprintf("# wanduck exit error\n");
 	exit(1);
 }
-

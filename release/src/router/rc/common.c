@@ -1233,8 +1233,8 @@ const zoneinfo_t tz_list[] = {
         {"EBST3",	"America/Araguaina"},	// (GMT-03:00) Brasilia //EBST3DST_1
 	{"UTC3DST",	"America/Saint-Pierre-et-Miquelon"},	// (GMT-03:00) Saint Pierre	//UTC2DST
 	{"UTC3",	"America/Araguaina"},	// (GMT-03:00) Buenos Aires, Georgetown
-        {"UTC2_1",	"America/Godthab"},	// (GMT-03:00) Greenland	//EBST3DST_2
         {"UTC2",	"Atlantic/South_Georgia"},	// (GMT-02:00) South Georgia
+	{"UTC2DST_1",   "America/Godthab"},     // (GMT-02:00) Greenland        //UTC2_1        //EBST3DST_2
         {"EUT1DST",     "Atlantic/Azores"},	// (GMT-01:00) Azores
         {"UTC1",        "Atlantic/Cape_Verde"},	// (GMT-01:00) Cape Verde Is.
         {"GMT0",        "GMT"},			// (GMT+00:00) Greenwich Mean Time
@@ -1274,12 +1274,12 @@ const zoneinfo_t tz_list[] = {
         {"UTC-4.30",    "Asia/Kabul"},		// (GMT+04:30) Kabul
         {"UTC-5",       "Asia/Karachi"},	// (GMT+05:00) Islamabad, Karachi, Tashkent
         {"UTC-5_1",     "Asia/Yekaterinburg"},	// (GMT+05:00) Yekaterinburg
+	{"UTC-5_2",	"Asia/Almaty"},		// (GMT+05:00) Almaty, Astana     //RFT-6
         {"UTC-5.30_2",  "Asia/Kolkata"},	// (GMT+05:00) Kolkata, Chennai
         {"UTC-5.30_1",  "Asia/Calcutta"},	// (GMT+05:30) Mumbai, New Delhi
         {"UTC-5.30",    "Asia/Calcutta"},	// (GMT+05:30) Sri Jayawardenepura
 	{"UTC-5.45",    "Asia/Kathmandu"},	// (GMT+05:45) Kathmandu
-        {"RFT-6",       "Asia/Almaty"},		// (GMT+06:00) Almaty
-        {"UTC-6",       "Asia/Dhaka"},		// (GMT+06:00) Astana, Dhaka
+        {"UTC-6",	"Asia/Dhaka"},		// (GMT+06:00) Dhaka
         {"UTC-6_2",     "Asia/Novosibirsk"},	// (GMT+06:00) Novosibirsk
         {"UTC-6.30",    "Asia/Yangon"},		// (GMT+06:30) Yangon
         {"UTC-7",       "Asia/Bangkok"},	// (GMT+07:00) Bangkok, Hanoi, Jakarta
@@ -1293,7 +1293,7 @@ const zoneinfo_t tz_list[] = {
         {"UTC-8_1",     "Asia/Irkutsk"},	// (GMT+08:00) Irkutsk
         {"UTC-9_1",     "Asia/Seoul"},		// (GMT+09:00) Seoul
         {"UTC-9_3",     "Asia/Yakutsk"},	// (GMT+09:00) Yakutsk
-        {"JST",         "Asia/Tokyo"},		// (GMT+09:00) Osaka, Sapporo, Tokyo
+        {"JST-9",       "Asia/Tokyo"},		// (GMT+09:00) Osaka, Sapporo, Tokyo
         {"CST-9.30",    "Australia/Darwin"},	// (GMT+09:30) Darwin
         {"UTC-9.30DST", "Australia/Adelaide"},	// (GMT+09:30) Adelaide
         {"UTC-10DST_1", "Australia/Canberra"},	// (GMT+10:00) Canberra, Melbourne, Sydney
@@ -1348,6 +1348,11 @@ void time_zone_x_mapping(void)
 	}else if (nvram_match("time_zone", "MST7DST_3")){
 		nvram_set("time_zone", "MST7");               /*Mazatlan*/
 		nvram_set("time_zone_dst", "0");
+	}else if (nvram_match("time_zone", "RFT-6")){
+		nvram_set("time_zone", "UTC-5_2");		/*Almaty, Astana*/
+	}else if (nvram_match("time_zone", "EBST3DST_2") || nvram_match("time_zone", "UTC2_1")){
+		nvram_set("time_zone", "UTC2DST_1");            /*Greenland*/
+		nvram_set("time_zone_dst", "1");
 	}else if (nvram_match("time_zone", "EBST3DST_2")){
 		nvram_set("time_zone", "UTC2_1");		/*Greenland*/
 		nvram_set("time_zone_dst", "0");
@@ -1419,6 +1424,10 @@ void time_zone_x_mapping(void)
 	else if (nvram_match("time_zone", "UTC2DST")){	/*Saint-Pierre-et-Miquelon*/
 		nvram_set("time_zone", "UTC3DST");
 	}
+	else if (nvram_match("time_zone", "JST")){	/* convert JST to JST-9 */
+		nvram_set("time_zone", "JST-9");
+	}
+
 
 	len = snprintf(tmpstr, sizeof(tmpstr), "%s", nvram_safe_get("time_zone"));
 	/* replace . with : */
@@ -1439,16 +1448,6 @@ void time_zone_x_mapping(void)
 #endif
 
 	nvram_set("time_zone_x", tmpstr);
-
-	/* special mapping */
-	if (nvram_match("time_zone", "JST"))
-		nvram_set("time_zone_x", "UCT-9");
-#if 0
-	else if (nvram_match("time_zone", "TST-10TDT"))
-		nvram_set("time_zone_x", "UCT-10");
-	else if (nvram_match("time_zone", "CST-9:30CDT"))
-		nvram_set("time_zone_x", "UCT-9:30");
-#endif
 
 	if ((fp = fopen("/etc/TZ", "w")) != NULL) {
 		fprintf(fp, "%s\n", tmpstr);

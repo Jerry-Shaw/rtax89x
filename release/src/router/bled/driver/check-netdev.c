@@ -49,8 +49,10 @@ void netdev_stats64_to_stats(struct net_device_stats *netdev_stats, const struct
 	const u64 *src = (const u64 *)stats64;
 	unsigned long *dst = (unsigned long *)netdev_stats;
 
+#ifndef NO_NETDEV_STATS_CHECK
 	BUILD_BUG_ON(sizeof(*netdev_stats) / sizeof(unsigned long) !=
 		     sizeof(*stats64) / sizeof(u64));
+#endif
 	for (i = 0; i < n; i++)
 		dst[i] = src[i];
 #endif

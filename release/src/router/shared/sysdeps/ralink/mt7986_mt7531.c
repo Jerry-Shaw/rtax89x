@@ -38,13 +38,14 @@
 /* Comment out this definition, and get the WAN port link status by mdio */
 #if !defined(PANTHERB) \
  && !defined(RTAX59U) \
+ && !defined(RTAX57M) \
  && !defined(CHEETAH)
 #define REDUCE_DUPLICATED_MDIO_QUERY
 #endif
 
-#if defined(PRTAX57_GO)
-#define NO_MT7531_SWITCH
-#endif
+/* for vport_to_phy_addr, distinguish whether PHY is on MT7531. */
+#define NOT_MT7531_PHY		100
+
 /* MT7531 Register */
 #define REG_MAC_PMSR_P0		0x3008
 #define REG_SSC_PHY_IAC		0x701c
@@ -54,11 +55,11 @@
 #define NR_WANLAN_PORT	7
 #elif defined(TUFAX4200) || defined(TUFAX6000)
 #define NR_WANLAN_PORT	6
-#elif defined(RTAX59U)
+#elif defined(RTAX59U) || defined(RTAX52)
 #define NR_WANLAN_PORT	4
 #elif defined(PRTAX57_GO)
 #define NR_WANLAN_PORT	2
-#else /* PANTHERB, CHEETAH */
+#else /* PANTHERB, CHEETAH, RTAX57M */
 #define NR_WANLAN_PORT	5
 #endif
 #define DBGOUT		NULL	/* "/dev/console" */
@@ -87,7 +88,7 @@ enum {
 	LAN2_PORT,
 	LAN1_PORT,
 	WAN_PORT,
-#elif defined(RTAX59U)
+#elif defined(RTAX59U) || defined(RTAX52)
 	LAN3_PORT=0,
 	LAN2_PORT,
 	LAN1_PORT,
@@ -134,7 +135,7 @@ static const int lan_wan_partition[9][NR_WANLAN_PORT] = {
 	{0,0,1,1,1,0}, // IPTV STB port = LAN1 & LAN2
 	{1,1,0,0,1,0}, // IPTV STB port = LAN3 & LAN4
 	{1,1,1,1,1,1}  // ALL
-#elif defined(RTAX59U)
+#elif defined(RTAX59U) || defined(RTAX52)
 	/* L1, L2, L3, W1G */
 	{1,1,1,0}, // Normal
 	{0,1,1,0}, // IPTV STB port = LAN1
@@ -154,7 +155,7 @@ static const int lan_wan_partition[9][NR_WANLAN_PORT] = {
 	{1,0}, // no use
 	{1,0}, // no use
 	{1,1}  // ALL
-#else /* PANTHERB, CHEETAH */
+#else /* PANTHERB, CHEETAH, RTAX57M */
 	/* L1, L2, L3, L4, W1G */
 	{1,1,1,1,0}, // Normal
 	{0,1,1,1,0}, // IPTV STB port = LAN1
@@ -167,7 +168,7 @@ static const int lan_wan_partition[9][NR_WANLAN_PORT] = {
 #endif
 };
 
-#if defined(RTCONFIG_BONDING_WAN)
+#if defined(RTCONFIG_BONDING_WAN) || defined(RTCONFIG_LACP)
 /* array index:		port number used in wanports_bond, enum bs_port_id.
  * 			0: WAN, 1~6: LAN1~6
  * array element:	virtual port
@@ -175,7 +176,7 @@ static const int lan_wan_partition[9][NR_WANLAN_PORT] = {
  */
 static const int bsport_to_vport[MAX_WANLAN_PORT] = {
 	WAN_PORT, LAN1_PORT, LAN2_PORT, LAN3_PORT
-#if !defined(RTAX59U)
+#if !defined(RTAX59U) && !defined(RTAX52)
 	, LAN4_PORT
 #endif
 #if defined(PANTHERA)
@@ -192,21 +193,28 @@ static const int bsport_to_vport[MAX_WANLAN_PORT] = {
  *
  * reference from
  * arch/arm64/boot/dts/mediatek/mt7986a-PANTHERA.dts
+ *
+ *********************************************************
+ * Notice: If PHY is not on MT7531, phy_addr needs to be *
+ * 	   increased by NOT_MT7531_PHY (100).		 *
+ *********************************************************
  */
 static const int vport_to_phy_addr[MAX_WANLAN_PORT] = {
 #if defined(PANTHERA)
-	4, 3, 2, 1, 0, 5, 6				/* LAN6~1, WAN */
+	4, 3, 2, 1, 0, 105, 106				/* LAN6~1, WAN */
 #elif defined(TUFAX4200)
-	5, 4, 3, 2, 1, 6				/* LAN5~1, WAN */
+	105, 4, 3, 2, 1, 106				/* LAN5~1, WAN */
 #elif defined(TUFAX6000)
-	5, 1, 2, 3, 4, 6				/* LAN5~1, WAN */
+	105, 1, 2, 3, 4, 106				/* LAN5~1, WAN */
 #elif defined(RTAX59U)
 	4, 3, 2, 1					/* LAN3~1, WAN */
 #elif defined(CHEETAH)
-	3, 2, 1, 0, 6					/* LAN4~1, WAN */
+	3, 2, 1, 0, 105					/* LAN4~1, WAN */
 #elif defined(PRTAX57_GO)
-	24, 0						/* LAN1, WAN */
-#else /* PANTHERB */
+	124, 100					/* LAN1, WAN */
+#elif defined(RTAX52)
+	0, 1, 2, 100					/* LAN3~1, WAN */
+#else /* PANTHERB, RTAX57M */
 	0, 1, 2, 3, 4					/* LAN4~1, WAN */
 #endif
 };
@@ -233,6 +241,10 @@ static const char *vport_to_iface[MAX_WANLAN_PORT] = {
 	"lan4", "lan3", "lan2", "lan1",				/* LAN4~1 */
 #elif defined(PRTAX57_GO)
 	"eth0",							/* LAN1 */
+#elif defined(RTAX52)
+	"lan1", "lan2", "lan3",					/* LAN3~1 */
+#elif defined(RTAX57M)
+	"lan4", "lan3", "lan2",	"lan1",				/* LAN4~1 */
 #else /* PANTHERB */
 	"lan0", "lan1", "lan2", "lan3",				/* LAN4~1 */
 #endif
@@ -243,7 +255,7 @@ static const char *vport_to_iface[MAX_WANLAN_PORT] = {
  * array element:	platform specific VoIP/STB virtual port bitmask.
  */
 static const unsigned int stb_to_mask[7] = { 0,
-#if defined(RTAX59U)
+#if defined(RTAX59U) || defined(RTAX52)
 	(1U << LAN1_PORT),
 	(1U << LAN2_PORT),
 	(1U << LAN2_PORT), /* unused */
@@ -268,11 +280,11 @@ static unsigned int wanlanports_mask =
 					(1U << WAN_PORT) | (1U << LAN1_PORT) | (1U << LAN2_PORT) | (1U << LAN3_PORT) | (1U << LAN4_PORT) | (1U << LAN5_PORT) | (1U << LAN6_PORT);
 #elif defined(TUFAX4200) || defined(TUFAX6000)
 					(1U << WAN_PORT) | (1U << LAN1_PORT) | (1U << LAN2_PORT) | (1U << LAN3_PORT) | (1U << LAN4_PORT) | (1U << LAN5_PORT);
-#elif defined(RTAX59U)
+#elif defined(RTAX59U) || defined(RTAX52)
 					(1U << WAN_PORT) | (1U << LAN1_PORT) | (1U << LAN2_PORT) | (1U << LAN3_PORT);
 #elif defined(PRTAX57_GO)
 					(1U << WAN_PORT) | (1U << LAN1_PORT);
-#else /* PANTHERB, CHEETAH */
+#else /* PANTHERB, CHEETAH, RTAX57M */
 					(1U << WAN_PORT) | (1U << LAN1_PORT) | (1U << LAN2_PORT) | (1U << LAN3_PORT) | (1U << LAN4_PORT);
 #endif
 
@@ -291,7 +303,7 @@ int esw_fd;
  * array value:	Model-specific virtual port number
  */
 static int n56u_to_model_port_mapping[] = {
-#if defined(RTAX59U)
+#if defined(RTAX59U) || defined(RTAX52)
 	LAN3_PORT,	//0000 0000 0001 LAN4 (convert to LAN3)
 	LAN2_PORT,	//0000 0000 0010 LAN3 (convert to LAN2)
 	LAN2_PORT,	//0000 0000 0100 LAN2
@@ -320,7 +332,7 @@ const int lan_id_to_vport[NR_WANLAN_PORT] = {
 #if !defined(PRTAX57_GO)
 	LAN2_PORT,
 	LAN3_PORT,
-#if !defined(RTAX59U)
+#if !defined(RTAX59U) && !defined(RTAX52)
 	LAN4_PORT,
 #endif
 #if defined(PANTHERA)
@@ -444,7 +456,6 @@ int mt7986_mt7531_reg_write(unsigned int phy, unsigned int reg, unsigned int val
 	return 0;
 }
 
-#ifndef NO_MT7531_SWITCH
 int mt7986_mt7531_phy_read(unsigned int port_num, unsigned int reg, unsigned int *value)
 {
 	unsigned int reg_value;
@@ -504,7 +515,6 @@ int mt7986_mt7531_phy_write(unsigned int port_num, unsigned int reg, unsigned in
 
 	return 0;
 }
-#endif //NO_MT7531_SWITCH
 
 /**
  * Convert (v)port to interface name.
@@ -632,9 +642,15 @@ int mt7986_mt7531_vlan_set(int vtype, char *upstream_if, int vid, int prio, unsi
 		eval("brctl", "addbr", brv_if);
 		eval("ifconfig", brv_if, "0.0.0.0", "up");
 
+#if 0
 		set_netdev_sysfs_param(brv_if, "bridge/multicast_querier", "1");
 		set_netdev_sysfs_param(brv_if, "bridge/multicast_snooping",
 			nvram_match("switch_br_no_snooping", "1")? "0" : "1");
+#else
+		/* should not handle the multicast on IPTV bridge */
+		set_netdev_sysfs_param(brv_if, "bridge/multicast_querier", "0");
+		set_netdev_sysfs_param(brv_if, "bridge/multicast_snooping", "0");
+#endif
 	}
 
 	if (vtype == VLAN_TYPE_WAN) {
@@ -729,23 +745,19 @@ static void get_phy_info_by_mdio(unsigned int phy, unsigned int *link, unsigned 
 	if (switch_init() < 0)
 		return;
 
-#ifndef NO_MT7531_SWITCH
 	if (phy >= 0 && phy <= 4) {
 		mt7986_mt7531_reg_read(0x1f, (REG_MAC_PMSR_P0 + 0x100*phy), &value);
 		l = value & 0x1;
 		s = (value >> 2) & 0x3;
 	}
 	else {
-#endif // NO_MT7531_SWITCH
-		mt7986_mt7531_reg_read(phy, 0x1, &value);
+		mt7986_mt7531_reg_read((phy - NOT_MT7531_PHY), 0x1, &value);
 		l = (value >> 2) & 0x1;
 		if (l) {
-			mt7986_mt7531_reg_read(phy, 0x18, &value);
+			mt7986_mt7531_reg_read((phy - NOT_MT7531_PHY), 0x18, &value);
 			s = value & 0x7;
 		}
-#ifndef NO_MT7531_SWITCH
 	}
-#endif // NO_MT7531_SWITCH
 
 	if (link) {
 		*link = l;
@@ -1066,22 +1078,18 @@ static void link_down_up_mt7986_mt7531_PHY(unsigned int vpmask, int status)
 			return;
 		}
 
-#ifndef NO_MT7531_SWITCH
 		if (phy >= 0 && phy <= 4)
 			mt7986_mt7531_phy_read(phy, 0x0, &value);
 		else
-#endif
-			mt7986_mt7531_reg_read(phy, 0x0, &value);
+			mt7986_mt7531_reg_read((phy - NOT_MT7531_PHY), 0x0, &value);
 		if (!status)
 			value |= 0x0800; /* power down PHY */
 		else
 			value &= 0xf7ff; /* power up PHY */
-#ifndef NO_MT7531_SWITCH
 		if (phy >= 0 && phy <= 4)
 			mt7986_mt7531_phy_write(phy, 0x0, value);
 		else
-#endif
-			mt7986_mt7531_reg_write(phy, 0x0, value);
+			mt7986_mt7531_reg_write((phy - NOT_MT7531_PHY), 0x0, value);
 	}
 
 	switch_fini();
@@ -1825,6 +1833,31 @@ int __do_led_control(int which, int mode)
 	return ret;
 }
 
+#elif defined(RTAX52)
+/* Enable/turn off MT7531 switch LED.
+ * @mode:	0: GPIO mode
+ * 		1: default mode
+ * @onoff:	force LED on/off under GPIO mode
+ */
+void set_mt7531_led(int mode, int onoff)
+{
+	switch (mode) {
+	case 0:		/* GPIO mode */
+		eval("switch", "reg", "w", "7c00", "1462000");		/* set LANx_LED0 direction to output */
+		if (onoff)
+			eval("switch", "reg", "w", "7c04", "0");	/* set LANx_LED0 output to low */
+		else
+			eval("switch", "reg", "w", "7c04", "1462000");	/* set LANx_LED0 output to high */
+		eval("switch", "reg", "w", "7c10", "11011111");		/* set LAN4_LED0 to GPIO mode */
+		eval("switch", "reg", "w", "7c14", "10110000");		/* set LAN1_LED0/LAN2_LED0/LAN3_LED0 to GPIO mode */
+		eval("switch", "reg", "w", "7c18", "110");		/* set LAN0_LED0 to GPIO mode */
+		break;
+	default:	/* default mode */
+		eval("switch", "reg", "w", "7c10", "11111111");		/* set LAN4_LED0 to default mode */
+		eval("switch", "reg", "w", "7c14", "11110110");		/* set LAN1_LED0/LAN2_LED0/LAN3_LED0 to default mode */
+		eval("switch", "reg", "w", "7c18", "111");		/* set LAN0_LED0 to default mode */
+	}
+}
 #endif // end of defined(TUFAX4200) || defined(TUFAX6000)
 
 #ifdef RTCONFIG_NEW_PHYMAP
@@ -1834,45 +1867,45 @@ void mt798x_get_phy_port_mapping(phy_port_mapping *port_mapping)
 	static phy_port_mapping port_mapping_static = {
 #if defined(TUFAX4200) || defined(TUFAX6000)
 		.count = NR_WANLAN_PORT,
-		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 2500, .ifname = NULL, .flag = 0 },
-		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[5] = { .phy_port_id = LAN5_PORT, .label_name = "L5", .cap = PHY_PORT_CAP_LAN, .max_rate = 2500, .ifname = NULL, .flag = 0 },
+		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 2500, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[5] = { .phy_port_id = LAN5_PORT, .label_name = "L5", .cap = PHY_PORT_CAP_LAN, .max_rate = 2500, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
 #elif defined(PANTHERA)
 		.count = NR_WANLAN_PORT,
-		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 2500, .ifname = NULL, .flag = 0 },
-		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 2500, .ifname = NULL, .flag = 0 },
-		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[5] = { .phy_port_id = LAN5_PORT, .label_name = "L5", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[6] = { .phy_port_id = LAN6_PORT, .label_name = "L6", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-#elif defined(PANTHERB)
+		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 2500, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 2500, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[5] = { .phy_port_id = LAN5_PORT, .label_name = "L5", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[6] = { .phy_port_id = LAN6_PORT, .label_name = "L6", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+#elif defined(PANTHERB) || defined(RTAX57M)
 		.count = NR_WANLAN_PORT,
-		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-#elif defined(RTAX59U)
+		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+#elif defined(RTAX59U) || defined(RTAX52)
 		.count = NR_WANLAN_PORT,
-		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
+		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
 #elif defined(CHEETAH)
 		.count = NR_WANLAN_PORT,
-		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 2500, .ifname = NULL, .flag = 0 },
-		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
+		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 2500, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[2] = { .phy_port_id = LAN2_PORT, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[3] = { .phy_port_id = LAN3_PORT, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[4] = { .phy_port_id = LAN4_PORT, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
 #elif defined(PRTAX57_GO)
 		.count = NR_WANLAN_PORT,
-		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
+		.port[0] = { .phy_port_id = WAN_PORT,  .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN1_PORT, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
 #else
 		#error "port_mapping is not defined."
 #endif

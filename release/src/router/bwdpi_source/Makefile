@@ -7,7 +7,7 @@ CFLAGS += -I$(TOP)/libasuslog
 LIBS += -L$(TOP)/libasuslog -lasuslog
 endif
 
-CFLAGS += -I$(TOP)/json-c
+CFLAGS += $(if $(RTCONFIG_DEBUG),-g -Wall) -I$(TOP)/json-c
 
 # BCM6750 : seperate bin / header / modules from bcm675x
 ifeq ($(BUILD_NAME),$(filter $(BUILD_NAME),RT-AX58U TUF-AX3000 TUF-AX5400 RT-AX82U RT-AX82_XD6 RT_AX82_XD6S GS-AX3000 GS-AX5400 DSL-AX82U))
@@ -36,6 +36,8 @@ export LITE_VERSION := y
 else ifeq ($(or $(RTCONFIG_QCA956X),$(RTCONFIG_QCN550X)),y)
 export LITE_VERSION := y
 else ifeq ($(or $(BWDPI_MTK7621_NEW)),y)
+export LITE_VERSION := y
+else ifeq ($(or $(RTCONFIG_SOC_MT7981)),y)
 export LITE_VERSION := y
 else ifeq ($(BUILD_NAME),$(filter $(BUILD_NAME),RT-AC85U RT-AC65U RT-AC56S RT-N18U))
 export PART_VERSION := y
@@ -278,7 +280,7 @@ ifeq ($(RTCONFIG_SOC_IPQ8064),y)
 	@cp -f modules/ipq806x/* RC_INDEP/
 else ifeq ($(RTCONFIG_SOC_IPQ8074),y)
 	@$(if $(RTCONFIG_SPF11_1_QSDK),cp -f modules/ipq807x_spf11.1/* RC_INDEP/)		# SPF11.1
-	@$(if $(RTCONFIG_SPF11_4_QSDK),cp -f modules/ipq807x_spf11.4/* RC_INDEP/)		# SPF11.4
+	@$(if $(RTCONFIG_SPF11_5_QSDK),cp -f modules/ipq807x_spf11.5/* RC_INDEP/)		# SPF11.5
 else ifeq ($(RTCONFIG_SOC_IPQ40XX),y)
 	@cp -f modules/dakota/* RC_INDEP/
 else ifeq ($(or $(RTCONFIG_QCA956X),$(RTCONFIG_QCN550X)),y)
@@ -340,6 +342,9 @@ else
 endif
 endif
 endif
+
+# workaround for ntdasus2014.cert
+	@cp -f bin/ntdasus2014.cert RC_INDEP/
 
 # signature version
 ifeq ($(LITE_VERSION),y)

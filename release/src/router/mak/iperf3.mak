@@ -1,10 +1,10 @@
-iperf3: iperf3/Makefile
+iperf3: iperf3/Makefile $(OPENSSL)
 	@$(SEP)
 	$(MAKE) -j8 -C $@
 
 iperf3/Makefile: iperf3/configure
 	# libstdc++.so.6 is required if you want to remove CFLAGS=-static below.
-	( cd iperf3 ; CFLAGS="-D_GNU_SOURCE $(if $(QCA),,-static)" $(CONFIGURE) \
+	( cd iperf3 ; CFLAGS="-D_GNU_SOURCE $(if $(QCA),-ldl -lpthread,-static)" LDFLAGS="-L$(STAGEDIR)/usr/lib" $(CONFIGURE) \
 		ac_cv_func_malloc_0_nonnull=yes $(if $(QCA),ac_cv_func_gettimeofday=yes ac_cv_func_inet_ntop=yes) \
 		--prefix=/usr --bindir=/usr/bin --libdir=/usr/lib \
 	)

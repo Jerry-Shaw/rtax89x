@@ -16,6 +16,7 @@
 <link rel="stylesheet" type="text/css" href="css/icon.css">
 <script type="text/javascript" src="/js/jquery.js"></script>
 <script type="text/javascript" src="/calendar/jquery-ui.js"></script>
+<script type="text/javascript" src="/js/httpApi.js"></script>
 <script type="text/javascript" src="/state.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" src="/help.js"></script>
@@ -24,8 +25,7 @@
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <script type="text/javascript" src="/form.js"></script>
 <script type="text/javascript" src="client_function.js"></script>
-<script type="text/javascript" src="/js/httpApi.js"></script>
-<script language="JavaScript" type="text/javascript" src="/js/asus_eula.js"></script>
+<script language="JavaScript" type="text/javascript" src="/js/asus_policy.js"></script>
 <style>
 *{
 	box-sizing: content-box;
@@ -880,9 +880,15 @@ function determineActionScript(){
 function submitQoS(){
 	if(validForm()){
 		if(document.form.qos_enable.value == "1" && document.form.qos_type.value == "1" && document.form.TM_EULA.value == "0"){
-			ASUS_EULA
-				.config(eula_confirm, cancel)
-				.show("tm")
+			if(policy_status.TM == 0 || policy_status.TM_time == ''){
+                const policyModal = new PolicyModalComponent({
+                    policy: "TM",
+                    agreeCallback: eula_confirm,
+                });
+                policyModal.show();
+            }else{
+                eula_confirm();
+            }
 		}
 		else{
 			if(	document.form.qos_enable.value == "1" && document.form.qos_type_orig.value != document.form.qos_type.value &&
@@ -1349,8 +1355,8 @@ function addRow_main(obj, length){
 		document.getElementById("download_rate").focus();
 		return false;
 	}
-	else if(isNaN(document.getElementById("download_rate").value) || document.getElementById("download_rate").value < 0.1){
-		alert("<#min_bound#> : 0.1 Mb/s");
+	else if(isNaN(document.getElementById("download_rate").value) || document.getElementById("download_rate").value < 0.001){
+		alert("<#min_bound#> : 0.001 Mb/s");
 		document.getElementById("download_rate").focus();
 		return false;
 	}
@@ -1360,8 +1366,8 @@ function addRow_main(obj, length){
 		document.getElementById("upload_rate").focus();
 		return false;
 	}
-	else if(isNaN(document.getElementById("upload_rate").value) || document.getElementById("upload_rate").value < 0.1){
-		alert("<#min_bound#> : 0.1 Mb/s");
+	else if(isNaN(document.getElementById("upload_rate").value) || document.getElementById("upload_rate").value < 0.001){
+		alert("<#min_bound#> : 0.001 Mb/s");
 		document.getElementById("upload_rate").focus();
 		return false;
 	}

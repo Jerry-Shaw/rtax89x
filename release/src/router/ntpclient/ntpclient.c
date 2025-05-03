@@ -460,6 +460,8 @@ int main(int argc, char *argv[]) {
 	char ntps[32], *next;
 	int fd;
 
+	time_t bf_time = 0, now=0;
+
 	for (;;) {
 		c = getopt( argc, argv, "c:" DEBUG_OPTION "h:i:p:lrs");
 		if (c == EOF) break;
@@ -518,6 +520,11 @@ int main(int argc, char *argv[]) {
 		live, udp_local_port, set_clock);
 	}
 
+	if(nvram_get_int("ntp_ready") == 0){
+		bf_time = time( (time_t*) 0 );
+		nvram_set_int("ntp_bf_time", bf_time);
+	}
+
 	foreach(ntps, hostname, next) {
 
 		/* Startup sequence */
@@ -534,7 +541,11 @@ int main(int argc, char *argv[]) {
 			fd = file_lock("ntpclient");
 			if(fd != -1) {
 				if (!nvram_match("ntp_ready", "1")) {
+					now = time( (time_t*) 0 );
+					nvram_set_int("ntp_diff_ts", now-bf_time);
+					update_ntp_ts(bf_time, now-bf_time);
 					nvram_set("ntp_ready", "1");
+#if 0
 #if !defined(RPAC56) && !defined(MAPAC1300) && !defined(MAPAC2200) && !defined(VZWAC1300) && !defined(RTCONFIG_DSL) && !defined(RTAX89U)
 #ifndef RTCONFIG_BT_CONN
 					if(nvram_contains_word("rc_support", "defpsk") && strncmp(nvram_safe_get("territory_code"), "CT", 2)){
@@ -542,13 +553,8 @@ int main(int argc, char *argv[]) {
 					}
 #endif
 #endif
-					doSystem("kill -SIGTSTP `cat %s`", "/var/run/ntp.pid");
-#ifdef RTCONFIG_CFGSYNC
-					if (pidof("cfg_server") >= 0)
-						kill_pidfile_s("/var/run/cfg_server.pid", SIGUSR1);
-					if (pidof("cfg_client") >= 0)
-						kill_pidfile_s("/var/run/cfg_client.pid", SIGUSR1);
 #endif
+					doSystem("kill -SIGTSTP `cat %s`", "/var/run/ntp.pid");
 				}
 				file_unlock(fd);
 			}

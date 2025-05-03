@@ -62,7 +62,6 @@
 #if defined(RTCONFIG_TUNNEL) && defined(RTCONFIG_ACCOUNT_BINDING)
 #include <aae_ipc.h>
 #endif
-
 #if defined(RTCONFIG_SWRT)
 #include "swrt.h"
 #endif
@@ -101,6 +100,23 @@ double get_wifi_maxpower(int target_unit);
 /* codb_utils.h is not in $(STAGEDIR) directory, declare function prototype instead. */
 extern int codb_test();
 #endif
+
+int getPid_fromFile(char *file_name)
+{
+	FILE *fp;
+	char *pidfile = file_name;
+	int result = -1;
+
+	fp= fopen(pidfile, "r");
+	if (!fp) {
+	    dbg("can not open:%s\n", file_name);
+	    return -1;
+	}
+	fscanf(fp,"%d",&result);
+	fclose(fp);
+
+	return result;
+}
 
 // led_str_ctrl
 enum led_id get_led_id(const char *led_str)
@@ -1044,6 +1060,36 @@ static int rctest_main(int argc, char *argv[])
 		}
 		json_object_put(root);
 	}
+	else if (strcmp(argv[1], "mastiff_rc_on")==0) {
+		char event[AAE_MAX_IPC_PACKET_SIZE];
+		snprintf(event, sizeof(event), AAE_MASTIFF_GENERIC_MSG, AAE_EID_MASTIFF_ACTION_REMOTE_CONN_TURNED_ON);
+		aae_sendIpcMsg(MASTIFF_IPC_SOCKET_PATH, event, strlen(event));
+	}
+	else if (strcmp(argv[1], "mastiff_eula_signed")==0) {
+		char event[AAE_MAX_IPC_PACKET_SIZE];
+		snprintf(event, sizeof(event), AAE_MASTIFF_GENERIC_MSG, AAE_EID_MASTIFF_ACTION_EULA_SIGNED);
+		aae_sendIpcMsg(MASTIFF_IPC_SOCKET_PATH, event, strlen(event));
+	}
+	else if (strcmp(argv[1], "aaews_sip_unreg")==0) {
+		char event[AAE_MAX_IPC_PACKET_SIZE];
+		snprintf(event, sizeof(event), AAE_AAEWS_GENERIC_MSG, AAE_EID_AAEWS_ACTION_SIP_UNREG);
+		aae_sendIpcMsg(AAEWS_IPC_SOCKET_PATH, event, strlen(event));
+	}
+	else if (strcmp(argv[1], "aaews_sip_reg")==0) {
+		char event[AAE_MAX_IPC_PACKET_SIZE];
+		snprintf(event, sizeof(event), AAE_AAEWS_GENERIC_MSG, AAE_EID_AAEWS_ACTION_SIP_REG);
+		aae_sendIpcMsg(AAEWS_IPC_SOCKET_PATH, event, strlen(event));
+	}
+	else if (strcmp(argv[1], "aaews_sdk_deinit")==0) {
+		char event[AAE_MAX_IPC_PACKET_SIZE];
+		snprintf(event, sizeof(event), AAE_AAEWS_GENERIC_MSG, AAE_EID_AAEWS_ACTION_SDK_DEINIT);
+		aae_sendIpcMsg(AAEWS_IPC_SOCKET_PATH, event, strlen(event));
+	}
+	else if (strcmp(argv[1], "aaews_sdk_init")==0) {
+		char event[AAE_MAX_IPC_PACKET_SIZE];
+		snprintf(event, sizeof(event), AAE_AAEWS_GENERIC_MSG, AAE_EID_AAEWS_ACTION_SDK_INIT);
+		aae_sendIpcMsg(AAEWS_IPC_SOCKET_PATH, event, strlen(event));
+	}
 #endif
 #ifdef RTCONFIG_GRE
 	else if (strcmp(argv[1], "l2gre") == 0) {
@@ -1084,6 +1130,14 @@ static int rctest_main(int argc, char *argv[])
 			fprintf(stderr, "%s\n", stainfo_buf);
 			free_stainfo(&stainfo_buf);
 		}
+	}
+	else if (strcmp(argv[1], "diag_print_sta")==0) {
+		char value[512];
+
+		snprintf(value, sizeof(value), "{\"%s\":{\"%s\":\"%d\"}}",
+			CONNDIAG_PREFIX, RAST_EVENT_ID, EID_CD_PRINT_STA_INFO);
+		extern int amas_cd_ipc_send_event(const char *ipc_path, char *data);
+		amas_cd_ipc_send_event(CONNDIAG_IPC_SOCKET_PATH,value);
 	}
 #endif
 	else {
@@ -1476,15 +1530,9 @@ static int hotplug_firmware(void)
 	sprintf(sysfs_path, "%s/%s/data", sysfs_root, devpath);
 	f_data = fopen(sysfs_path, "wb");
 
-#if !defined(RAX120)
 	hook_data = req_fw_hook(fw_name, &hook_size);
-#endif
 	if (!hook_data || !hook_size) {
 		for (fw_root = &fw_root_tbl[0]; f_fw == NULL && *fw_root != NULL; ++fw_root) {
-#if defined(RAX120)
-			sprintf(fw_path, "%s/%s/%s", *fw_root, nvram_safe_get("location_code"),fw_name);
-			if(!f_exists(fw_path))
-#endif
 			sprintf(fw_path, "%s/%s", *fw_root, fw_name);
 			f_fw = fopen(fw_path, "rb");
 		}
@@ -2139,6 +2187,7 @@ static const applets_t applets[] = {
 	{ "auto46det", 			auto46det_main			},
 	{ "v6plusd", 			v6plusd_main			},
 	{ "ocnvcd", 			ocnvcd_main			},
+	{ "dslited", 			dslited_main			},
 #endif
 #if defined(RTCONFIG_RALINK) || defined(RTCONFIG_EXT_RTL8365MB) || defined(RTCONFIG_EXT_RTL8370MB) || defined(RTAX55) || defined(RTAX1800) || defined(RTAX58U_V2) || defined(RTAX3000N)
 	{ "rtkswitch",			config_rtkswitch		},
@@ -2183,6 +2232,9 @@ static const applets_t applets[] = {
 #else
 	{ "firmware_check_update",	firmware_check_update_main	},
 #endif
+#endif
+#ifdef RTCONFIG_FRS_FEEDBACK
+	{ "sendfeedback",	start_sendfeedback },
 #endif
 #ifdef RTAC68U
 	{ "firmware_enc_crc",		firmware_enc_crc_main		},
@@ -2763,6 +2815,13 @@ int main(int argc, char **argv)
 			_dprintf("tmpsta wrap:[%d]/[%s]/[%s]\n", band, argv[2], prefix);
 			create_tmp_sta(band, argv[2], prefix);
 		}
+		return 0;
+	}
+#endif
+
+#ifdef RTCONFIG_WIREGUARD
+	if (!strcmp(base, "check_wgc_ep")) {
+		check_wgc_endpoint();
 		return 0;
 	}
 #endif
@@ -3727,8 +3786,10 @@ _dprintf("LED_NOMOBILE=%d, LED_2G_YELLOW=%d, LED_3G_BLUE=%d, LED_4G_WHITE=%d.\n"
 			wan_proto = WAN_LW4O6;
 		else if (!strcmp(argv[2], "v6plus"))
 			wan_proto = WAN_V6PLUS;
-		else
+		else if (!strcmp(argv[2], "ocnvc"))
 			wan_proto = WAN_OCNVC;
+		else
+			wan_proto = WAN_V6OPTION;
 
 		while (fgets(rules, sizeof(rules), stdin) != NULL) {
 			if (s46_mapcalc(0, wan_proto, rules, peerbuf, sizeof(peerbuf), addr6buf, sizeof(addr6buf),
@@ -4144,3 +4205,4 @@ void exe_eu_wa_rr(void){
 	notify_rc("restart_acsd");
 
 }
+

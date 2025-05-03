@@ -45,9 +45,9 @@ struct pnsInfo mapPushInfo[] =
 	{SYS_DETECT_ASUS_SSID_UNENCRYPT_EVENT        ,0  ,"ASUS router is found and need configuration"             ,"" },
 	{SYS_ECO_MODE_EVENT                          ,0  ,"ECO Mode is on"                                          ,"" },
 	{SYS_GAME_MODE_EVENT                         ,0  ,"Game mode is on"                                         ,"" },
-	{SYS_NEW_DEVICE_WIFI_CONNECTED_EVENT         ,3  ,"New Device Connected(wifi)"                              ,"webhook_device_connect" },
-	{SYS_NEW_DEVICE_ETH_CONNECTED_EVENT          ,3  ,"New Device Connected(eth)"                               ,"webhook_device_connect" },
-	{SYS_EXISTED_DEVICE_WIFI_CONNECTED_EVENT     ,0  ,"Manage Your Wireless Client"                             ,"webhook_device_connect" },
+	{SYS_NEW_DEVICE_WIFI_CONNECTED_EVENT         ,3  ,"New Device Connected(wifi)"                              ,"" },
+	{SYS_NEW_DEVICE_ETH_CONNECTED_EVENT          ,3  ,"New Device Connected(eth)"                               ,"" },
+	{SYS_EXISTED_DEVICE_WIFI_CONNECTED_EVENT     ,0  ,"Manage Your Wireless Client"                             ,"" },
 	{SYS_ALL_WIFI_TURN_OFF_EVENT                 ,1  ,"All your WiFi is turned off"                             ,"" },
 	/* FIRMWARE EVENT */
 	{SYS_FW_NWE_VERSION_AVAILABLE_EVENT          ,0  ,"New Firmware Available"                                  ,"" },

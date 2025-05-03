@@ -1107,7 +1107,7 @@ function validate_format_OpenVPN(_obj, _validField){
 			return false;
 		}
 
-		if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+		if((wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			if (!validator.range_s46_ports($vpn_server_port[0], "none")){
 				if(!confirm(port_confirm)){
 					$vpn_server_port.focus();
@@ -1841,17 +1841,17 @@ function Get_Component_Setting_Profile_OpenVPN(_type){
 			show_popup_help_OpenVPN("Feature_Desc");
 		});
 
-	var vpn_server_port_parm = {"title":"<#WLANAuthentication11a_ExAuthDBPortNumber_itemname#>", "type":"text", "id":"vpn_server_port", "need_check":true, "maxlength":5, "openHint":"32_6"};
+	var vpn_server_port_parm = {"title":"<#WLANAuthentication11a_ExAuthDBPortNumber_itemname#>", "type":"text", "id":"vpn_server_port", "need_check":true, "maxlength":5};
 	Get_Component_Input(vpn_server_port_parm).appendTo($detail_general)
 		.find("#" + vpn_server_port_parm.id + "")
 		.unbind("keypress").keypress(function(){
 			return validator.isNumber(this,event);
 		});
 	var $vpn_server_port_hint_obj = $("<div>").addClass("item_hint").html("* <#SSH_Port_Suggestion#>").appendTo($detail_general);
-	if(wan_proto == "v6plus" || wan_proto == "ocnvc"){
+	if(wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt"){
 		var get_s46_hgw_case = '<% nvram_get("s46_hgw_case"); %>';      //topology 2,3,6
-                var s46_ports_check_flag = (get_s46_hgw_case=='3' || get_s46_hgw_case=='6')? true:false;        //true for topology 3||6
-		var get_ipv6_s46_ports = (Softwire46_support && (wan_proto == "v6plus" || wan_proto == "ocnvc")) ? httpApi.nvramGet(["ipv6_s46_ports"]).ipv6_s46_ports : '0';
+		var s46_ports_check_flag = (get_s46_hgw_case=='3' || get_s46_hgw_case=='6')? true:false;        //true for topology 3||6
+		var get_ipv6_s46_ports = (Softwire46_support && (wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt")) ? httpApi.nvramGet(["ipv6_s46_ports"]).ipv6_s46_ports : '0';
 		var array_ipv6_s46_ports = new Array("");
 		if(get_ipv6_s46_ports!="0" && get_ipv6_s46_ports!=""){
 			array_ipv6_s46_ports = get_ipv6_s46_ports.split(" ");

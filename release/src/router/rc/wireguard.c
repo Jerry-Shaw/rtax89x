@@ -15,6 +15,7 @@
 #define WG_TAG         "WireGuard"
 #define WG_PRG_CRU     "/usr/sbin/cru"
 #define WG_WAIT_SYNC   5
+#define WGC_CHK_EP     "WGC_CHK_EP"
 
 typedef enum wg_type{
 	WG_TYPE_SERVER = 0,
@@ -49,6 +50,10 @@ static void _wg_tunnel_create(char* prefix, char* ifname, char* conf_path)
 		eval("ip", "address", "add", buf, "dev", ifname);
 
 	eval("wg", "setconf", ifname, conf_path);
+
+	if (nvram_pf_get_int(prefix, "mtu"))
+		eval("ip", "link", "set", ifname, "mtu", nvram_pf_safe_get(prefix, "mtu"));
+
 	eval("ip", "link", "set", "up", "dev", ifname);
 }
 
@@ -335,6 +340,7 @@ static void _wg_server_nf_add_nat6(const char* prefix, const char* ifname)
 		fp = fopen(path, "w");
 		if (fp)
 		{
+			fprintf(fp, "#!/bin/sh\n\n");
 			strlcpy(wan6_ifname, get_wan6_ifname(wan_primary_ifunit()), sizeof(wan6_ifname));
 
 			for (c_unit = 1; c_unit <= WG_SERVER_CLIENT_MAX; c_unit++)
@@ -365,6 +371,7 @@ static void _wg_server_nf_add(int unit, const char* prefix, const char* ifname)
 	char path[128] = {0};
 	char wan6_ifname[IFNAMSIZ] = {0};
 	char wan_ifname[IFNAMSIZ] = {0};
+	int wan_service = get_ipv4_service();
 #ifdef RTCONFIG_MULTILAN_CFG
 	int vpns_idx = get_vpns_idx_by_proto_unit(VPN_PROTO_WG, unit);
 	MTLAN_T *pmtl = (MTLAN_T *)INIT_MTLAN(sizeof(MTLAN_T));
@@ -380,6 +387,12 @@ static void _wg_server_nf_add(int unit, const char* prefix, const char* ifname)
 	if (fp)
 	{
 		fprintf(fp, "#!/bin/sh\n\n");
+		fprintf(fp, "iptables -t nat -A LOCALSRV -p udp --dport %d -j ACCEPT\n", nvram_pf_get_int(prefix, "port"));
+		if (wan_service != WAN_DHCP && wan_service != WAN_STATIC)
+		{
+			fprintf(fp, "iptables -t nat -A VSERVER -p udp -m udp --dport %d -j DNAT --to-destination %s:%d\n",
+				nvram_pf_get_int(prefix, "port"), nvram_safe_get("lan_ipaddr"), nvram_pf_get_int(prefix, "port"));
+		}
 		fprintf(fp, "iptables -A WGSI -p udp --dport %d -j ACCEPT\n", nvram_pf_get_int(prefix, "port"));
 		fprintf(fp, "ip6tables -A WGSI -p udp --dport %d -j ACCEPT\n", nvram_pf_get_int(prefix, "port"));
 		fprintf(fp, "iptables -A WGSI -i %s -j ACCEPT\n", ifname);
@@ -446,6 +459,7 @@ static void _wg_server_nf_add(int unit, const char* prefix, const char* ifname)
 #endif
 }
 
+#ifdef RTCONFIG_MULTILAN_CFG
 static void _wg_client_nf_bind_sdn(FILE* fp, const char* wgc_ifname, const char* sdn_ifname)
 {
 	if (fp) {
@@ -469,6 +483,7 @@ static void _wg_client_nf_bind_sdn(FILE* fp, const char* wgc_ifname, const char*
 		}
 	}
 }
+#endif
 
 static void _wg_client_nf_add(int unit, char* prefix, char* ifname)
 {
@@ -709,8 +724,7 @@ static void _wg_client_gen_conf(char* prefix, char* path)
 			);
 		if (psk[0] != '\0')
 			fprintf(fp, "PresharedKey = %s\n", psk);
-		if (alive)
-			fprintf(fp, "PersistentKeepalive = %d\n", alive);
+		fprintf(fp, "PersistentKeepalive = %d\n", alive ?: 25);
 
 		fclose(fp);
 	}
@@ -1022,6 +1036,59 @@ void _wg_server_route_update(char* ifname, const char* c_prefix)
 	}
 }
 
+void _wg_server_ip_rule_add(const char* c_prefix)
+{
+	char aips[4096] = {0};
+	char buf[128] = {0};
+	char *p = NULL;
+	char pref_str[16] = {0};
+
+	snprintf(pref_str, sizeof(pref_str), "%d", IP_RULE_PREF_VPNS);
+
+	memset(aips, 0, sizeof(aips));
+	strlcpy(aips, nvram_pf_safe_get(c_prefix, "aips"), sizeof(aips));
+	foreach_44(buf, aips, p)
+	{
+		_dprintf("%s: add [%s]\n", __FUNCTION__, buf);
+		if (strchr(buf, '/') == NULL)
+			continue;
+		if (!strcmp(buf, "0.0.0.0/0"))
+			continue;
+		else if (!strcmp(buf, "::/0"))
+			continue;
+		else
+		{
+			eval("ip", "rule", "add", "to", buf, "lookup", "main", "pref", pref_str);
+		}
+	}
+}
+
+void _wg_server_ip_rule_del(const char* c_prefix)
+{
+	char path[128] = {0};
+	char aips[4096] = {0};
+	char buf[128] = {0};
+	char *p = NULL;
+	char pref_str[16] = {0};
+
+	snprintf(pref_str, sizeof(pref_str), "%d", IP_RULE_PREF_VPNS);
+	snprintf(path, sizeof(path), "%s/%sroute", WG_DIR_CONF, c_prefix);
+
+	f_read_string(path, aips, sizeof(aips));
+	foreach_44(buf, aips, p)
+	{
+		_dprintf("%s: del [%s]\n", __FUNCTION__, buf);
+		if (strchr(buf, '/') == NULL)
+			continue;
+		if (!strcmp(buf, "0.0.0.0/0"))
+			continue;
+		else if (!strcmp(buf, "::/0"))
+			continue;
+		else
+			eval("ip", "rule", "del", "to", buf, "lookup", "main", "pref", pref_str);
+	}
+}
+
 static int _wait_time_sync(int max)
 {
 	while (!nvram_match("ntp_ready", "1") && max--)
@@ -1052,6 +1119,71 @@ static int _wgc_jobs_remove(void)
 		NULL };
 
 	return _eval(argv, NULL, 0, NULL);
+}
+
+static int _wgc_check_ep_jobs_exist(void)
+{
+	const char *tmpfile = "/tmp/wgc_chk.tmp";
+	char buf[256];
+	int ret;
+
+	snprintf(buf, sizeof(buf), "%s l | grep %s > %s", WG_PRG_CRU, WGC_CHK_EP, tmpfile);
+	system(buf);
+	ret = (f_size(tmpfile) > 0) ? 1 : 0;
+	unlink(tmpfile);
+
+	return (ret);
+}
+
+static int _wgc_check_ep_jobs_install(void)
+{
+	char *argv[] = {WG_PRG_CRU,
+		"a", WGC_CHK_EP,
+		"*/1 * * * * check_wgc_ep",
+		NULL };
+
+	return _eval(argv, NULL, 0, NULL);
+}
+
+static int _wgc_check_ep_jobs_remove(void)
+{
+	char *argv[] = {WG_PRG_CRU,
+		"d", WGC_CHK_EP,
+		NULL };
+
+	return _eval(argv, NULL, 0, NULL);
+}
+
+static int _is_any_wgs_enabled()
+{
+	int unit;
+	char nv[16] = {0};
+
+	for (unit = 1; unit <= WG_SERVER_MAX; unit++)
+	{
+		snprintf(nv, sizeof(nv), "wgs%d_enable", unit);
+		if (nvram_get_int(nv))
+		{
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int _is_any_wgc_enabled()
+{
+	int unit;
+	char nv[16] = {0};
+
+	for (unit = 1; unit <= WG_CLIENT_MAX; unit++)
+	{
+		snprintf(nv, sizeof(nv), "wgc%d_enable", unit);
+		if (nvram_get_int(nv))
+		{
+			return 1;
+		}
+	}
+	return 0;
 }
 
 static void _wg_server_update_service(const char* prefix)
@@ -1178,6 +1310,8 @@ void start_wgs(int unit)
 		if (nvram_pf_get_int(c_prefix, "enable") == 0)
 			continue;
 		_wg_config_route(c_prefix, ifname, 0);
+		/// add priority rule
+		_wg_server_ip_rule_add(c_prefix);
 	}
 
 	/// sysdeps
@@ -1190,7 +1324,10 @@ void start_wgs(int unit)
 void stop_wgs(int unit)
 {
 	char ifname[8] = {0};
+	char prefix[16] = {0};
 	int wg_enable = is_wg_enabled();
+	char c_prefix[16] = {0};
+	int c_unit;
 #ifdef RTCONFIG_MULTILAN_CFG
 	int i;
 	int sdn_rule_exist = 0;
@@ -1198,6 +1335,7 @@ void stop_wgs(int unit)
 #endif
 
 	snprintf(ifname, sizeof(ifname), "%s%d", WG_SERVER_IF_PREFIX, unit);
+	snprintf(prefix, sizeof(prefix), "%s%d_", WG_SERVER_NVRAM_PREFIX, unit);
 
 	/// netfilter
 #ifdef RTCONFIG_MULTILAN_CFG
@@ -1210,6 +1348,15 @@ void stop_wgs(int unit)
 		_wg_server_nf_bind_wan(ifname, 0);
 #endif
 	_wg_x_nf_del(ifname);
+
+	/// delete priority rule
+	for (c_unit = 1; c_unit <= WG_SERVER_CLIENT_MAX; c_unit++)
+	{
+		snprintf(c_prefix, sizeof(c_prefix), "%sc%d_", prefix, c_unit);
+		if (nvram_pf_get_int(c_prefix, "enable") == 0)
+			continue;
+		_wg_server_ip_rule_del(c_prefix);
+	}
 
 	/// delete tunnel
 	_wg_tunnel_delete(ifname);
@@ -1277,6 +1424,10 @@ void start_wgc(int unit)
 	update_resolvconf();
 #endif
 
+	/// check endpoint jobs
+	if (!_wgc_check_ep_jobs_exist())
+		_wgc_check_ep_jobs_install();
+
 	/// sysdeps
 	_wg_config_sysdeps(1);
 }
@@ -1287,12 +1438,17 @@ void stop_wgc(int unit)
 	char ifname[8] = {0};
 	char path[128] = {0};
 	int table = 0;
-	int wg_enable = is_wg_enabled();
+	int any_wgc_enabled = _is_any_wgc_enabled();
+	int wg_enable = _is_any_wgs_enabled() | any_wgc_enabled;
 
 	_dprintf("%s %d\n", __FUNCTION__, unit);
 
 	snprintf(prefix, sizeof(prefix), "%s%d_", WG_CLIENT_NVRAM_PREFIX, unit);
 	snprintf(ifname, sizeof(ifname), "%s%d", WG_CLIENT_IF_PREFIX, unit);
+
+	/// check endpoint jobs
+	if (!any_wgc_enabled)
+		_wgc_check_ep_jobs_remove();
 
 #ifdef RTCONFIG_VPN_FUSION
 	table = find_vpnc_idx_by_wgc_unit(unit);
@@ -1381,7 +1537,7 @@ void run_wgs_fw_nat_scripts()
 	int unit;
 	char buf[128] = {0};
 
-	for(unit = 1; unit <= WG_CLIENT_MAX; unit++)
+	for(unit = 1; unit <= WG_SERVER_MAX; unit++)
 	{
 		snprintf(buf, sizeof(buf), "%s/fw_%s%d_nat6.sh", WG_DIR_CONF, WG_SERVER_IF_PREFIX, unit);
 		if(f_exists(buf))
@@ -1478,30 +1634,34 @@ void update_wgs_client_ep()
 	}
 }
 
+void reload_wgs_ip_rule()
+{
+	int s_unit;
+	char s_prefix[16] = {0};
+	int c_unit;
+	char c_prefix[16] = {0};
+
+	for (s_unit = 1; s_unit <= WG_SERVER_MAX; s_unit++)
+	{
+		snprintf(s_prefix, sizeof(s_prefix), "%s%d_", WG_SERVER_NVRAM_PREFIX, s_unit);
+		for (c_unit = 1; c_unit <= WG_SERVER_CLIENT_MAX; c_unit++)
+		{
+			snprintf(c_prefix, sizeof(c_prefix), "%sc%d_", s_prefix, c_unit);
+			if (nvram_pf_get_int(c_prefix, "enable") == 0)
+				continue;
+			_wg_server_ip_rule_del(c_prefix);
+			_wg_server_ip_rule_add(c_prefix);
+		}
+	}
+}
+
 int is_wg_enabled()
 {
 	int wg_enable = 0;
-	int unit;
-	char nv[16] = {0};
 
-	for (unit = 1; unit <= WG_SERVER_MAX; unit++)
-	{
-		snprintf(nv, sizeof(nv), "wgs%d_enable", unit);
-		if (nvram_get_int(nv))
-		{
-			wg_enable = 1;
-			break;
-		}
-	}
-	for (unit = 1; unit <= WG_CLIENT_MAX; unit++)
-	{
-		snprintf(nv, sizeof(nv), "wgc%d_enable", unit);
-		if (nvram_get_int(nv))
-		{
-			wg_enable = 1;
-			break;
-		}
-	}
+	wg_enable += _is_any_wgs_enabled();
+	wg_enable += _is_any_wgc_enabled();
+
 	return (wg_enable);
 }
 
@@ -1509,9 +1669,10 @@ void check_wgc_endpoint()
 {
 	int unit;
 	char prefix[8] = {0};
-	static int cnt[WG_CLIENT_MAX] = {0};
 	char ep_addr[64] = {0};
+	char ep_addr_r[1024] = {0};
 	char buf[1024] = {0};
+	char *p;
 
 	if(!is_wan_connect(wan_primary_ifunit()))
 		return;
@@ -1529,18 +1690,19 @@ void check_wgc_endpoint()
 		if (is_valid_ip(ep_addr) > 0)
 			continue;
 
-		if (cnt[unit]++)
+		if (_wg_resolv_ep(ep_addr, buf, sizeof(buf)))
+			continue;
+
+		// TBD:
+		strlcpy(ep_addr_r, nvram_pf_safe_get(prefix, "ep_addr_r"), sizeof(ep_addr_r));
+		if ((p = strchr(ep_addr_r, ' ')))
+			*p = '\0';
+
+		if (!strstr(buf, ep_addr_r))
 		{
-			//cannot connect to server hostname, ip may changed.
-			if (_wg_resolv_ep(ep_addr, buf, sizeof(buf)))
-				continue;
-			if (strcmp(nvram_pf_safe_get(prefix, "ep_addr_r"), buf))
-			{
-				_dprintf("%s ip changed to %s\n", ep_addr, buf);
-				snprintf(buf, sizeof(buf), "restart_wgc %d", unit);
-				notify_rc(buf);
-			}
-			cnt[unit] = 0;
+			_dprintf("%s ip changed to %s\n", ep_addr, buf);
+			snprintf(buf, sizeof(buf), "restart_wgc %d", unit);
+			notify_rc(buf);
 		}
 	}
 }

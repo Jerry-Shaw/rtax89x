@@ -1,6 +1,9 @@
 #include <rc.h>
 #include <shared.h>
 #include <shutils.h>
+#if defined(RTCONFIG_RALINK) || defined(RTCONFIG_QCA)
+#include <flash_mtd.h>
+#endif
 #ifdef RTCONFIG_RALINK
 #include <ralink.h>
 #if defined(RTN14U) || defined(RTAC52U) || defined(RTAC51U) || defined(RTN54U) || defined(RTAC1200HP) || defined(RTN56UB1) || defined(RTN56UB2) || defined(RTAC54U) || defined(RTAC1200GA1) || defined(RTAC1200GU) || defined(RTAC51UP) || defined(RT4GAC86U) || defined(RTAC53)
@@ -21,6 +24,7 @@
 #if defined(RTCONFIG_BCMWL6) && defined(RTCONFIG_HAS_5G_2)
 #include <wlioctl.h>
 #endif
+#include "flash_mtd.h"			//FRead()
 
 #define MULTICAST_BIT  0x0001
 #define UNIQUE_OUI_BIT 0x0002
@@ -159,7 +163,6 @@ static int setAllSpecificColorLedOn(enum ate_led_color color)
 	case MODEL_GTAXY16000:
 	case MODEL_RTAX89U:
 		{
-#if !defined(RAX120)
 			static enum led_id white_led[] = {
 				LED_POWER, LED_WAN, LED_LAN, LED_2G,
 				LED_5G, LED_SFPP,
@@ -192,7 +195,6 @@ static int setAllSpecificColorLedOn(enum ate_led_color color)
 					write_phy_reg(aqr_addr, 0x401EC431, (color == LED_COLOR_ORANGE)? 0x100 : 0);
 				}
 			}
-#endif
 		}
 		break;
 #endif
@@ -235,14 +237,19 @@ static int setAllSpecificColorLedOn(enum ate_led_color color)
 		}
 		break;
 #endif	/* TUFAX4200, TUFAX6000 */
-#if defined(RTAC82U)
+#if defined(RTAC82U) || defined(RTAX57M)
 	case MODEL_RTAC82U:
+	case MODEL_RTAX57M:
 		{
 			static enum led_id blue_led[] = {
 				LED_POWER, LED_WAN, 
 				LED_2G, LED_5G,
+#ifdef RTCONFIG_LAN4WAN_LED
 				LED_LAN1,LED_LAN2,
 				LED_LAN3,LED_LAN4,
+#else
+				LED_LAN,
+#endif
 				LED_ID_MAX
 			};
 			static enum led_id red_led[] = {
@@ -4251,6 +4258,43 @@ int asus_ate_command(const char *command, const char *value, const char *value2)
 		return 0;
 	}
 #endif
+#if defined(RTCONFIG_QCA) || defined(RTCONFIG_RALINK)
+	else if (!strcmp(command, "Set_FCO"))
+	{
+		if (!IS_ATE_FACTORY_MODE())
+			return -1;
+
+		if (fco_set(value)<0)
+		{
+			puts("ATE_ERROR_INCORRECT_PARAMETER");
+			return EINVAL;
+		}
+		return 0;
+	}
+	else if (!strcmp(command, "Get_FCO"))
+	{
+		fco_get();
+		return 0;
+	}
+#endif
+#if defined(RTCONFIG_MT798X)
+	else if (!strcmp(command, "Set_ISPIMG"))
+	{
+		if (nvram_get_int("ISPMODE") != 1)
+			return -1;
+		if (update_isp_img(value))
+			return EINVAL;
+		return 0;
+	}
+	else if (!strcmp(command, "Clear_ISPIMG"))
+	{
+		if (!IS_ATE_FACTORY_MODE())
+			return -1;
+		if (clear_isp_img())
+			return EINVAL;
+		return 0;
+	}
+#endif
 	else
 	{
 		puts("ATE_UNSUPPORT");
@@ -4541,7 +4585,7 @@ int ate_get_fw_upgrade_state(void) {
 int init_pass_nvram(void)
 {
 #ifdef RTCONFIG_NVRAM_ENCRYPT
-	char dec_passwd[128]={0};
+	char dec_passwd[128] __attribute__((unused)) ={0};
 #endif
 #if defined(RTCONFIG_BCMARM)
 	if (!nvram_get_int("x_Setting")) {
@@ -4561,7 +4605,6 @@ int init_pass_nvram(void)
 			_dprintf("READ ASUS PASS: Out of scope\n");
 			nvram_set("forget_it", "");
 		 } else {
-			int len = strlen(pass);
 			int i;
 			if (pass[0] == 0xff)
 				nvram_set("forget_it", "");
@@ -4589,3 +4632,4 @@ int init_pass_nvram(void)
 
 	return 0;
 }
+

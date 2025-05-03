@@ -6824,7 +6824,6 @@ void regular_ddns_check(void)
 	}
 	
 	//_dprintf("WAN IP change!\n");
-	nvram_set("ddns_update_by_wdog", "1");
 	if (wan_unit != last_unit) {
 #ifndef RTCONFIG_INADYN
 		unlink("/tmp/ddns.cache");
@@ -6834,7 +6833,7 @@ void regular_ddns_check(void)
 	}
 	logmessage("watchdog", "Hostname/IP mapping error! Restart ddns.");
 	stop_ddns();
-	start_ddns(NULL);
+	start_ddns(NULL, 0);
 
 	return;
 }
@@ -6893,7 +6892,7 @@ void ddns_check(void)
 	}
 
 	if (nvram_match("ddns_regular_check", "1")&& !nvram_match("ddns_server_x", "WWW.ASUS.COM") && !nvram_match("ddns_server_x", "WWW.ASUS.COM.CN")) {
-		int period = nvram_get_int("ddns_regular_period");
+		int period = nvram_get_int("ddns_regular_period"); //minute(s)
 		if (period < 30) period = 60;
 		if (ddns_check_count >= (period*2)) {
 			regular_ddns_check();
@@ -6904,7 +6903,7 @@ void ddns_check(void)
 	}
 
 	if (wan_unit == last_unit && nvram_match("ddns_updated", "1")) { //already updated success
-#ifdef RTCONFIG_IPV6
+#if defined(RTCONFIG_IPV6) && defined(RTCONFIG_INADYN)
 		/* not enable IPv6 or IPv6 already updated success */
 		if (!ipv6_enabled() || nvram_match("ddns_ipv6_update", "0") || (ipv6_enabled() && nvram_match("ddns_ipv6_update", "1") && nvram_match("ddns_ipv6_updated", "1"))) {
 			//logmessage("watchdog", "IPv4/IPv6 already updated success, exit DDNS Retry.\n");
@@ -6915,8 +6914,9 @@ void ddns_check(void)
 #endif
 	}
 
-	if (wan_unit == last_unit) { //Only Time-out, connect_fail, -1 (in asusddns) or not auth_fail (not in asusddns)
+	if (wan_unit == last_unit) { /* DDNS has already been run, ddns_last_wan_unit has been set. */
 		if ( nvram_match("ddns_server_x", "WWW.ASUS.COM") || nvram_match("ddns_server_x", "WWW.ASUS.COM.CN")) {
+			/* Only Time-out, connect_fail, -1 (in asusddns) or not auth_fail (not in asusddns) */
 			if ( !( !strcmp(nvram_safe_get("ddns_return_code_chk"),"Time-out") ||
 				!strcmp(nvram_safe_get("ddns_return_code_chk"),"connect_fail") ||
 				strstr(nvram_safe_get("ddns_return_code_chk"), "-1") ) )
@@ -6939,6 +6939,7 @@ void ddns_check(void)
 	ddns_check_retry--;
 	/* Stop retry and show the return code to UI */
 	if (ddns_check_retry <= 0) {
+		/* If in "ddns_query" then continue to next round, otherwise start ddns. */
 		if (nvram_match("ddns_return_code", "ddns_query")) {
 			nvram_set("ddns_return_code", nvram_safe_get("ddns_return_code_chk"));
 			ddns_recover_min = ((30 + rand_seed_by_time() % 30)*2);
@@ -6955,7 +6956,6 @@ void ddns_check(void)
 	}
 	nvram_set_int("ddns_check_retry", ddns_check_retry);
 
-	nvram_set("ddns_update_by_wdog", "1");
 	if (wan_unit != last_unit) {
 #ifndef RTCONFIG_INADYN
 		unlink("/tmp/ddns.cache");
@@ -6965,7 +6965,7 @@ void ddns_check(void)
 	}
 	logmessage("watchdog", "start ddns.");
 	stop_ddns();
-	start_ddns("watchdog");
+	start_ddns("watchdog", 0);
 
 	return;
 }
@@ -7902,7 +7902,9 @@ static void auto_firmware_check()
 	localtime_r(&now, &local);
 
 #ifdef RTCONFIG_AUTO_FW_UPGRADE
-	update_enable = nvram_get_int("webs_update_enable");
+	if(get_ASUS_privacy_policy()){
+		update_enable = nvram_get_int("webs_update_enable");
+	}
 	strlcpy(update_time_tmp, nvram_safe_get("webs_update_time"), sizeof(update_time_tmp));
 	if(sscanf(update_time_tmp, "%d:%d", &update_time_hr, &update_time_min) != 2){
 		update_time_hr = (2 + rand_hr);
@@ -7931,7 +7933,7 @@ static void auto_firmware_check()
 		if (periodic_check)
 			asus_ctrl_sku_update();
 #endif
-#ifdef RTCONFIG_ASD
+#if defined(RTCONFIG_ASD) && !defined(RTCONFIG_ASD_2_1)
 		//notify asd to download version file
 		if (pids("asd") && (bootup_check || (periodic_check && period_retry == 0)))
 		{
@@ -8587,6 +8589,7 @@ void onboarding_check()
 {
 	static int bh_selected = 0;
 	static int onboarding_count = 0;
+	int lock = 0;
 
 	if (!nvram_match("start_service_ready", "1"))
 		return;
@@ -8638,7 +8641,12 @@ void onboarding_check()
 #endif
 		}
 
-		notify_rc("resetdefault");
+		lock = file_lock("onboarding");
+		if (strlen(nvram_safe_get("cfg_group")) == 0) {
+			stop_cfgsync();
+			notify_rc("resetdefault");
+		}
+		file_unlock(lock);
 	}
 }
 #endif
@@ -9801,6 +9809,53 @@ void record_current_sys_uptime(void)
 	cnt %= record_period;
 }
 
+/*******************************************************************
+* NAME: feedback_check
+* AUTHOR: Renjie Lee
+* CREATE DATE: 2023/12/27
+* DESCRIPTION: Check 'fb_state', if it is '0', it means that the feedback was failed for some reasons at last time.
+*     We need to call 'sendfeedback' to resend the feedback.
+* INPUT:  None
+* OUTPUT: None
+* RETURN: None
+* NOTE: Watchdog calls this function for every 30 seconds.
+*     We skip the first 3 calls and execute the 4th call. So the function will work for every 120 seconds.
+*
+*******************************************************************/
+#ifdef RTCONFIG_FRS_FEEDBACK
+void feedback_check(void)
+{
+	static int check = -1;
+	int skip_times = 4;
+
+	check++;
+	check %= skip_times;
+	if(check != skip_times - 1)
+	{
+		return;
+	}
+
+	if(!nvram_get_int("ntp_ready"))
+	{
+		return;
+	}
+
+	if(nvram_match("fb_state", "0"))
+	{
+		char *cmd[] = {"sendfeedback", NULL};
+		int pid;
+
+		if(!pids("sendfeedback"))
+		{
+			logmessage("watchdog", "[%s] Resend the last feedback..\n", __FUNCTION__);
+			_dprintf("[%s] Resend the last feedback..\n", __FUNCTION__);
+			nvram_set("fb_resend", "1");
+			_eval(cmd, NULL, 0, &pid);
+		}
+	}
+}
+#endif /* RTCONFIG_FRS_FEEDBACK */
+
 /* wathchdog is runned in NORMAL_PERIOD, 1 seconds
  * check in each NORMAL_PERIOD
  *	1. button
@@ -10237,9 +10292,9 @@ wdp:
 			system("sh /tmp/mnt/sda1/auto_test.sh");
 		}
 #endif
-#ifdef RTCONFIG_WIREGUARD
-	check_wgc_endpoint();
-#endif
+#ifdef RTCONFIG_FRS_FEEDBACK
+	feedback_check();
+#endif /* RTCONFIG_FRS_FEEDBACK */
 	if(check_auth_code)
 		check_auth_code();
 }
@@ -10471,3 +10526,4 @@ int wdg_monitor_main(int argc, char *argv[])
 	return 0;
 }
 #endif
+

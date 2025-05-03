@@ -515,6 +515,10 @@ ifeq ($(RT4GAC86U),y)
 OBJS += $(LIBDIR)/libc_nonshared.a
 endif
 
+ifeq ($(or $(RTCONFIG_GEARUPPLUGIN), $(RTCONFIG_UUPLUGIN)), y)
+OBJS += $(if $(wildcard uu_utils.c),uu_utils.o,prebuild/uu_utils.o)
+endif
+
 all: libshared.so libshared.a
 
 libshared.so: $(OBJS)

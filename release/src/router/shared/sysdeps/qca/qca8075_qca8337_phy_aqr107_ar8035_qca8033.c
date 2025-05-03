@@ -590,9 +590,15 @@ int qca8075_8337_8035_8033_aqr107_vlan_set(int vtype, char *upstream_if, int vid
 		eval("brctl", "addbr", brv_if);
 		eval("ifconfig", brv_if, "0.0.0.0", "up");
 
+#if 0
 		set_netdev_sysfs_param(brv_if, "bridge/multicast_querier", "1");
 		set_netdev_sysfs_param(brv_if, "bridge/multicast_snooping",
 			nvram_match("switch_br_no_snooping", "1")? "0" : "1");
+#else
+		/* should not handle the multicast on IPTV bridge */
+		set_netdev_sysfs_param(brv_if, "bridge/multicast_querier", "0");
+		set_netdev_sysfs_param(brv_if, "bridge/multicast_snooping", "0");
+#endif
 	}
 
 	if (vtype == VLAN_TYPE_WAN) {
@@ -2496,31 +2502,31 @@ void get_phy_port_mapping(phy_port_mapping *port_mapping)
 	static phy_port_mapping port_mapping_static = {
 #if defined(RTAC89U)
 		.count = 10,
-		.port[0] = { .phy_port_id = LAN1_PORT, .ext_port_id = -1, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[1] = { .phy_port_id = LAN2_PORT, .ext_port_id = -1, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[2] = { .phy_port_id = LAN3_PORT, .ext_port_id = -1, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[3] = { .phy_port_id = LAN4_PORT, .ext_port_id = -1, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[4] = { .phy_port_id = LAN5_PORT, .ext_port_id = -1, .label_name = "L5", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[5] = { .phy_port_id = LAN6_PORT, .ext_port_id = -1, .label_name = "L6", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[6] = { .phy_port_id = LAN7_PORT, .ext_port_id = -1, .label_name = "L7", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[7] = { .phy_port_id = LAN8_PORT, .ext_port_id = -1, .label_name = "L8", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[8] = { .phy_port_id = WAN_PORT, .ext_port_id = -1, .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[9] = { .phy_port_id = WAN10GS_PORT, .ext_port_id = -1, .label_name = "W2", .cap = (PHY_PORT_CAP_WAN2 | PHY_PORT_CAP_SFPP), .max_rate = 10000, .ifname = NULL, .flag = 0 }
+		.port[0] = { .phy_port_id = LAN1_PORT, .ext_port_id = -1, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN2_PORT, .ext_port_id = -1, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[2] = { .phy_port_id = LAN3_PORT, .ext_port_id = -1, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[3] = { .phy_port_id = LAN4_PORT, .ext_port_id = -1, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[4] = { .phy_port_id = LAN5_PORT, .ext_port_id = -1, .label_name = "L5", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[5] = { .phy_port_id = LAN6_PORT, .ext_port_id = -1, .label_name = "L6", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[6] = { .phy_port_id = LAN7_PORT, .ext_port_id = -1, .label_name = "L7", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[7] = { .phy_port_id = LAN8_PORT, .ext_port_id = -1, .label_name = "L8", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[8] = { .phy_port_id = WAN_PORT, .ext_port_id = -1, .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[9] = { .phy_port_id = WAN10GS_PORT, .ext_port_id = -1, .label_name = "W2", .cap = (PHY_PORT_CAP_WAN2 | PHY_PORT_CAP_SFPP), .max_rate = 10000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL }
 #elif defined(RTAX89U) || defined(GTAXY16000)
 		.count = 13,
-		.port[0] = { .phy_port_id = LAN1_PORT, .ext_port_id = -1, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[1] = { .phy_port_id = LAN2_PORT, .ext_port_id = -1, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[2] = { .phy_port_id = LAN3_PORT, .ext_port_id = -1, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[3] = { .phy_port_id = LAN4_PORT, .ext_port_id = -1, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[4] = { .phy_port_id = LAN5_PORT, .ext_port_id = -1, .label_name = "L5", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[5] = { .phy_port_id = LAN6_PORT, .ext_port_id = -1, .label_name = "L6", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[6] = { .phy_port_id = LAN7_PORT, .ext_port_id = -1, .label_name = "L7", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[7] = { .phy_port_id = LAN8_PORT, .ext_port_id = -1, .label_name = "L8", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[8] = { .phy_port_id = WAN_PORT, .ext_port_id = -1, .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0 },
-		.port[9] = { .phy_port_id = WAN10GR_PORT, .ext_port_id = -1, .label_name = "W1", .cap = (PHY_PORT_CAP_WAN | PHY_PORT_CAP_WAN2), .max_rate = 10000, .ifname = NULL, .flag = 0 },
-		.port[10] = { .phy_port_id = WAN10GS_PORT, .ext_port_id = -1, .label_name = "W2", .cap = (PHY_PORT_CAP_WAN | PHY_PORT_CAP_WAN3 | PHY_PORT_CAP_SFPP), .max_rate = 10000, .ifname = NULL, .flag = 0 },
-		.port[11] = { .phy_port_id = -1, .ext_port_id = -1, .label_name = "U1", .cap = PHY_PORT_CAP_USB, .max_rate = 5000, .ifname = NULL, .flag = 0 },
-		.port[12] = { .phy_port_id = -1, .ext_port_id = -1, .label_name = "U2", .cap = PHY_PORT_CAP_USB, .max_rate = 5000, .ifname = NULL, .flag = 0 }
+		.port[0] = { .phy_port_id = LAN1_PORT, .ext_port_id = -1, .label_name = "L1", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[1] = { .phy_port_id = LAN2_PORT, .ext_port_id = -1, .label_name = "L2", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[2] = { .phy_port_id = LAN3_PORT, .ext_port_id = -1, .label_name = "L3", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[3] = { .phy_port_id = LAN4_PORT, .ext_port_id = -1, .label_name = "L4", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[4] = { .phy_port_id = LAN5_PORT, .ext_port_id = -1, .label_name = "L5", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[5] = { .phy_port_id = LAN6_PORT, .ext_port_id = -1, .label_name = "L6", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[6] = { .phy_port_id = LAN7_PORT, .ext_port_id = -1, .label_name = "L7", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[7] = { .phy_port_id = LAN8_PORT, .ext_port_id = -1, .label_name = "L8", .cap = PHY_PORT_CAP_LAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[8] = { .phy_port_id = WAN_PORT, .ext_port_id = -1, .label_name = "W0", .cap = PHY_PORT_CAP_WAN, .max_rate = 1000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[9] = { .phy_port_id = WAN10GR_PORT, .ext_port_id = -1, .label_name = "W1", .cap = (PHY_PORT_CAP_WAN | PHY_PORT_CAP_WAN2), .max_rate = 10000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[10] = { .phy_port_id = WAN10GS_PORT, .ext_port_id = -1, .label_name = "W2", .cap = (PHY_PORT_CAP_WAN | PHY_PORT_CAP_WAN3 | PHY_PORT_CAP_SFPP), .max_rate = 10000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[11] = { .phy_port_id = -1, .ext_port_id = -1, .label_name = "U1", .cap = PHY_PORT_CAP_USB, .max_rate = 5000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL },
+		.port[12] = { .phy_port_id = -1, .ext_port_id = -1, .label_name = "U2", .cap = PHY_PORT_CAP_USB, .max_rate = 5000, .ifname = NULL, .flag = 0, .seq_no = -1, .ui_display = NULL }
 #else
 		#error "port_mapping is not defined."
 #endif
@@ -2806,7 +2812,7 @@ static int dump_sfpp_eeprom(FILE *fp)
 			tmp + 12, tmp + 13, tmp + 14, tmp + 15);
 		if (r > 0) {
 			if ((rlen + r) > sizeof(a0)) {
-				fprintf(fp, "Size of a0 (%d) is not enough (%d)!\n", sizeof(a0), rlen + r);
+				fprintf(fp, "Size of a0 (%d) is not enough (%d)!\n", (int) sizeof(a0), rlen + r);
 				rlen = sizeof(a0) - rlen;
 			}
 			memcpy(p, tmp, r);
@@ -2861,7 +2867,7 @@ static int dump_sfpp_eeprom(FILE *fp)
 
 		if (r > 0) {
 			if ((rlen + r) > sizeof(a2)) {
-				fprintf(fp, "Size of a2 (%d) is not enough (%d)!\n", sizeof(a2), rlen + r);
+				fprintf(fp, "Size of a2 (%d) is not enough (%d)!\n", (int) sizeof(a2), rlen + r);
 				rlen = sizeof(a2) - rlen;
 			}
 			memcpy(p, tmp, r);
@@ -3299,7 +3305,7 @@ static int dump_qca8337_regs(FILE *fp)
 				tmp + 2, tmp + 3, tmp + 4, tmp + 5, tmp + 6, tmp + 7);
 			if (r > 0) {
 				if ((rlen + r) * 4 > sizeof(reg)) {
-					fprintf(fp, "Size of reg (%d) is not enough (%d)!\n", sizeof(reg), (rlen + r) * 4);
+					fprintf(fp, "Size of reg (%d) is not enough (%d)!\n", (int) sizeof(reg), (rlen + r) * 4);
 					rlen = sizeof(reg) - rlen;
 				}
 				memcpy(p, tmp, r * 4);
@@ -3530,11 +3536,12 @@ static int dump_qca_nss_drv_stats(FILE *fp)
 /* Dump @fn content to @fp.
  * @fp:	FILE pointer
  * @fn: filename
+ * @nl: print newline at end of file
  * @return:
  * 	0:	success
  *  otherwise:	error
  */
-static int dump_file(FILE *fp, const char *fn)
+static int __dump_file(FILE *fp, const char *fn, int nl)
 {
 	FILE *fp_res;
 	char line[512];
@@ -3548,11 +3555,14 @@ static int dump_file(FILE *fp, const char *fn)
 	while (fgets(line, sizeof(line), fp_res) != NULL) {
 		fprintf(fp, "%s", line);
 	}
-	fprintf(fp, "\n");
+	if (nl)
+		fprintf(fp, "\n");
 	fclose(fp_res);
 
 	return 0;
 }
+
+static inline int dump_file(FILE *fp, const char *fn) { return __dump_file(fp, fn, 0); }
 
 /* Exec @cmd and dump output to @fp
  * @fp:	FILE pointer

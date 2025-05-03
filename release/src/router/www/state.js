@@ -166,7 +166,7 @@ var Session = Session || (function(){
 		var store = (win.name ? JSON.parse(win.name) : {});
 		function Save() {
 			win.name = JSON.stringify(store);
-		};
+		}
 		
 		if (window.addEventListener) window.addEventListener("unload", Save, false);
 		else if (window.attachEvent) window.attachEvent("onunload", Save);
@@ -459,6 +459,7 @@ var band2g_support = isSupport("2.4G");
 var band5g_support = isSupport("5G");
 var band5g2_support = isSupport("5G-2");
 var band6g_support = isSupport("wifi6e");
+var wifi7_support = isSupport("wifi7");
 var band60g_support = isSupport("wigig");
 var max_band60g_wl_bw = 6;	// 2.16 GHz
 if (based_modelid == "GT-AXY16000") {
@@ -491,6 +492,7 @@ var non_frameburst_support = isSupport("non_frameburst");
 var SwitchCtrl_support = isSupport("switchctrl");
 var dsl_support = isSupport("dsl");
 var sfpp_support = isSupport("sfp+");
+var sfpp2500m_support = isSupport("sfp+2.5g");
 var vdsl_support = isSupport("vdsl");
 var mswan_support = isSupport("mswan");
 var dualWAN_support = isSupport("dualwan");
@@ -533,6 +535,8 @@ var IPv6_Passthrough_support = isSupport("ipv6pt");
 var IPv6_Only_support = isSupport("v6only");
 var Softwire46_support = isSupport("s46");
 var ocnvc_support = isSupport("ocnvc");
+var dslite_support = isSupport("dslite");
+var v6option_support = isSupport("v6option");
 var ParentalCtrl2_support = isSupport("PARENTAL2");
 var pptpd_support = isSupport("pptpd"); 
 var openvpnd_support = isSupport("openvpnd"); 
@@ -589,6 +593,7 @@ var wifiRadar_support = isSupport("wifiradar")
 var aura_support = isSupport("aura_rgb");
 var boostKey_support = isSupport("boostkey");
 var smart_connect_support = isSupport("smart_connect") || isSupport("bandstr");
+var smart_connect_v2_support = isSupport("smart_connect_v2");
 var rrsut_support = isSupport("rrsut");
 var gobi_support = isSupport("gobi");
 var findasus_support = isSupport("findasus");
@@ -635,6 +640,7 @@ var meoVoda_support = isSupport("meoVoda");
 var movistarTriple_support = isSupport("movistarTriple");
 var utf8_ssid_support = isSupport("utf8_ssid");
 var wpa3_support = isSupport('wpa3');
+var wpa3_enterprise_support = isSupport('wpa3-e');
 var owe_trans_support = isSupport('owe_trans');
 var uu_support = isSupport('uu_accel');
 var internetSpeed_support = isSupport("ookla");
@@ -644,6 +650,7 @@ var oam_support = isSupport('oam');
 var hnd_ax_675x_support = isSupport('hnd_ax_675x');
 var wireguard_support = isSupport('wireguard');
 var gre_support = isSupport('gre');
+var mlr_support = isSupport("mlr");
 var softcenter_support = isSupport('softcenter');
 var entware_support = isSupport('entware');
 var swrt_fullcone_support = isSupport('swrt_fullcone');
@@ -1176,7 +1183,7 @@ function show_banner(L3){// L3 = The third Level of Menu
 	}
 	// APP Link End
 	
-	if(bwdpi_support && qos_enable_flag && qos_type_flag == "1")
+	if(bwdpi_support && isSwMode('rt') && qos_enable_flag && qos_type_flag == "1")
 		banner_code +='<td width="30"><div id="bwdpi_status" class=""></div></td>\n';	
 		
 	if(wifi_hw_sw_support && !downsize_8m_support && !downsize_4m_support){
@@ -1481,6 +1488,7 @@ function show_menu(){
 		showMenuTree(Session.get("menuList"), Session.get("menuExclude"));
 	}
 	catch(e){
+		//
 	}
 
 	require(['/require/modules/menuTree.js'], function(menuTree){
@@ -2575,23 +2583,31 @@ function logout(){
 }
 
 function reboot(){
-	if(confirm("<#Main_content_Login_Item7#>")){
-		var win_time = window.setTimeout(function() {}, 0);
-		while (win_time--)
-			window.clearTimeout(win_time);
-		var win_inter = window.setInterval(function() {}, 0);
-		while (win_inter--)
-			window.clearInterval(win_inter);
-		var iframe_len = frames.length;
-		for(var i = 0; i < iframe_len; i += 1) {
-			var ifr_time = frames[i].window.setTimeout(function() {}, 0);
-			while (ifr_time--)
-				frames[i].window.clearTimeout(ifr_time);
-			var ifr_inter = frames[i].window.setInterval(function() {}, 0);
-			while (ifr_inter--)
-				frames[i].window.clearInterval(ifr_inter);
+	var FbState = httpApi.nvramGet(["fb_state"], true).fb_state;
+	var FbNote = `<#feedback_note5#>`;
+
+	if(FbState == "0"){
+		alert(FbNote);
+	}
+	else{
+		if(confirm("<#Main_content_Login_Item7#>")){
+			var win_time = window.setTimeout(function() {}, 0);
+			while (win_time--)
+				window.clearTimeout(win_time);
+			var win_inter = window.setInterval(function() {}, 0);
+			while (win_inter--)
+				window.clearInterval(win_inter);
+			var iframe_len = frames.length;
+			for(var i = 0; i < iframe_len; i += 1) {
+				var ifr_time = frames[i].window.setTimeout(function() {}, 0);
+				while (ifr_time--)
+					frames[i].window.clearTimeout(ifr_time);
+				var ifr_inter = frames[i].window.setInterval(function() {}, 0);
+				while (ifr_inter--)
+					frames[i].window.clearInterval(ifr_inter);
+			}
+			document.rebootForm.submit();
 		}
-		document.rebootForm.submit();
 	}
 }
 
@@ -3102,7 +3118,7 @@ function refreshStatus(xhr){
 	}
 	
 	//Adaptive QoS mode	
-	if(bwdpi_support && qos_enable_flag && qos_type_flag == "1"){
+	if(bwdpi_support && isSwMode('rt') && qos_enable_flag && qos_type_flag == "1"){
 		if(bwdpi_app_rulelist.indexOf('game') != -1){
 			document.getElementById("bwdpi_status").className = "bwdpistatus_game";
 		}	
@@ -3311,8 +3327,17 @@ function refreshStatus(xhr){
 					document.getElementById('single_wan').className = "single_wan" + NM_connect_status.className;
 					document.getElementById("wanIP_div").style.display = NM_connect_status.hasInternet ? "" : "none";
 					if(NM_connect_status.hasInternet){
-						if(active_wan_unit == "0")
+						if(active_wan_unit == "0"){
+							var wan_ipv6_network_json =('<% wan_ipv6_network(); %>' != '{}')? JSON.parse('<% wan_ipv6_network(); %>'):{};
+
 							document.getElementById("index_status").innerHTML = '<span style="word-break:break-all;">' + wan0_ipaddr + '</span>';
+							if(is_CH_sku && wan_ipv6_network_json.status != "0" && wan_ipv6_network_json.IPv6_Address != ""){
+								document.getElementById("index_ipv6_status").innerHTML = '<span style="word-break:break-all;">'+wan_ipv6_network_json.IPv6_Address+'</span>';
+							}
+							if(is_CH_sku && wan_ipv6_network_json.status != "0" && wan_ipv6_network_json.Link_Local_Address != ""){
+								document.getElementById("index_ipv6_ll_status").innerHTML = '<span style="word-break:break-all;">'+wan_ipv6_network_json.Link_Local_Address+'</span>';
+							}
+						}
 						else if(active_wan_unit == "1")
 							document.getElementById("index_status").innerHTML = '<span style="word-break:break-all;">' + wan1_ipaddr + '</span>';
 					}
@@ -3796,7 +3821,7 @@ function refreshStatus(xhr){
 		le_restart_httpd_chk = le_restart_httpd;
 	}
 
-	if(window.frames["statusframe"] && window.frames["statusframe"].stopFlag == 1 || stopFlag == 1){
+	if(window.frames["statusframe"] && (typeof window.frames["statusframe"].stopFlag != "undefined" && window.frames["statusframe"].stopFlag == 1) || stopFlag == 1){
 		return 0;
 	}
 }	
@@ -4301,7 +4326,8 @@ var reset_wan_to_fo = {
 		return (!check_bwdpi_engine_status() && check_dual_wan_status().status == "1" && check_dual_wan_status().mode == "lb") ? true : false;
 	},
 	"show_confirm_hint" : function(){
-		var confirm_hint = 'Dual-WAN "load balance" mode will be switched to "fail-over" while enable "AiProtection" features, Are you sure to continue?';/*untranslated*/
+		var confirm_hint = `<#dualwan_ch2_fo_by_AiProtection#>`;
+		confirm_hint = confirm_hint.replace('%@', `<#AiProtection_title#>`);
 		var confirm_flag = confirm(confirm_hint);
 		if(confirm_flag)
 			return true;
@@ -4621,3 +4647,72 @@ function Get_Component_PWD_Strength_Meter(id){
 function plainPasswordSwitch(obj, event){
 	(event === 'focus') ? (obj.type = 'text') : (obj.type = 'password');						
 }
+
+function checkPolicy() {
+	const policyStatus = PolicyStatus()
+		.then(data => {
+			if (data.EULA == "0") {
+				const policyModal = new PolicyUpdateModalComponent({
+					policyStatus: data,
+					securityUpdate: 1,
+					websUpdate: 1,
+				});
+				policyModal.show();
+			} else if (data.EULA == 1 && ((data.PP == 1 && data.PP_time != "") || (data.PP == 0 && data.PP_time == ""))) {
+				const policyModal = new PolicyModalComponent({
+					policyStatus: data,
+					policy: 'PP',
+					securityUpdate: 1,
+					websUpdate: 1,
+				});
+				policyModal.show();
+			} else if (data.TM == 1 && data.TM_time == '') {
+				const policyModal = new PolicyModalComponent({
+					policyStatus: data,
+					policy: "TM"
+				});
+				policyModal.show();
+			}
+		});
+}
+if (
+    !(window.appInterface || // from Android app
+        (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.appInterface) // for iOS app
+    )
+) {
+	setTimeout(() => {
+		if (typeof httpApi === 'undefined') {
+			const httpApi_script = document.createElement('script');
+			httpApi_script.src = '/js/httpApi.js';
+			document.head.appendChild(httpApi_script);
+			httpApi_script.onload = () => {
+				if (re_mode != 1) {
+					if (typeof ASUS_POLICY === 'undefined') {
+						const policy_script = document.createElement('script');
+						policy_script.src = '/js/asus_policy.js';
+						document.head.appendChild(policy_script);
+						policy_script.onload = () => {
+							checkPolicy();
+						}
+					} else {
+						checkPolicy();
+					}
+				}
+			}
+		} else {
+			if (re_mode != 1) {
+				if (typeof ASUS_POLICY === 'undefined') {
+					const policy_script = document.createElement('script');
+                    policy_script.src = '/js/asus_policy.js';
+                    document.head.appendChild(policy_script);
+                    policy_script.onload = () => {
+                        checkPolicy();
+                    }
+                } else {
+                    checkPolicy();
+                }
+            }
+        }
+    }, 1500);
+}
+

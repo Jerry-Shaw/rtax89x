@@ -285,8 +285,9 @@ var MUMIMO5G_support = isSupport('mumimo_5g'); // RTCONFIG_MUMIMO_5G
 	}
 	else{
 		if(based_modelid == "GT-AXY16000"
-		|| based_modelid == "RT-AX89U" || based_modelid == "PL-AX56_XP4"
-		|| based_modelid == "RT-AC95U" || based_modelid == "RT-AC88N" || based_modelid == "RT-AC88Q" || based_modelid == "RT-AC82U" || based_modelid == "RT-AC58U"
+		|| based_modelid == "RT-AX89U" || based_modelid == "PL-AX56_XP4"){
+			QAM1024_support = true;
+		}else if(based_modelid == "RT-AC95U" || based_modelid == "RT-AC88N" || based_modelid == "RT-AC88Q" || based_modelid == "RT-AC82U" || based_modelid == "RT-AC58U"
 		|| based_modelid == "MAP-AC1300" || based_modelid == "MAP-AC2200" || based_modelid == "VZW-AC1300" || based_modelid == "MAP-AC1750" || based_modelid == "MAP-AC3000" 
 		|| based_modelid == "RT-AD7200"
 		|| based_modelid == "BRT-AC828"
@@ -349,6 +350,10 @@ function initial(){
 			document.form.wl_radio[0].disabled = true;
 		}
 	}
+
+	if(mlr_support){
+        document.getElementById('mlr_field').style.display = '';
+    }
 	
 	// MODELDEP: for AC ser
 	if(Rawifi_support){
@@ -432,7 +437,7 @@ function initial(){
 		if((Qcawifi_support || Rawifi_support) && band5g_11ax_support)
 			document.getElementById('wl_txbf_desc').innerHTML = "<#WLANConfig11b_x_axBeam#>";
 
-		if(QAM1024_support || (Bcmwifi_support && QAM256_support)){
+		if(Bcmwifi_support && (QAM1024_support || QAM256_support)){
 			if(document.form.wl_nmode_x.value == "0" || document.form.wl_nmode_x.value == "8"){		// wireless mode: Auto , N/AC mixed
 				inputCtrl(document.form.wl_turbo_qam, 1);
 			}
@@ -477,7 +482,7 @@ function initial(){
 			inputCtrl(document.form.wl_txbf, 1);	
 		}
 
-		if (based_modelid == "TUF-AX4200" || based_modelid == "TUF-AX6000" || based_modelid == "RT-AX59U") {
+		if (based_modelid == "TUF-AX4200" || based_modelid == "TUF-AX6000" || based_modelid == "RT-AX59U" || based_modelid == "RT-AX52" || based_modelid == "PRT-AX57_GO" || based_modelid == "RT-AX57M") {
 			inputCtrl(document.form.wl_itxbf, 1);
 		}
 
@@ -503,9 +508,14 @@ function initial(){
 		document.getElementById("wl_txPower_field").style.display = "none";
 	}
 	else{ // 2.4GHz
-		if((Qcawifi_support || Rawifi_support) && (QAM256_support || QAM256_2G_support)){
-			inputCtrl(document.form.wl_turbo_qam, 1);
-			$("#turbo_qam_title").html("256-QAM");
+		if((Qcawifi_support || Rawifi_support)){
+			if(QAM1024_support){
+				inputCtrl(document.form.wl_turbo_qam, 1);
+				$("#turbo_qam_title").html("1024-QAM");
+			}else if(QAM256_support || QAM256_2G_support){
+				inputCtrl(document.form.wl_turbo_qam, 1);
+				$("#turbo_qam_title").html("256-QAM");
+			}
 		}
 		else if(QAM1024_support || (Bcmwifi_support && QAM256_support)){
 			if(based_modelid == "RT-N18U" && bootLoader_ver < 2000)
@@ -570,7 +580,7 @@ function initial(){
 			document.form.wl_mumimo.disabled = false;
 		}
 
-		if(based_modelid == "4G-AC86U" || based_modelid == "4G-AX56" || based_modelid == "RT-AX53U" || based_modelid == "RT-AX54" || based_modelid == "XD4S" || based_modelid == "TUF-AX4200" || based_modelid == "TUF-AX6000" || based_modelid == "RT-AX59U"){
+		if(based_modelid == "4G-AC86U" || based_modelid == "4G-AX56" || based_modelid == "RT-AX53U" || based_modelid == "RT-AX54" || based_modelid == "XD4S" || based_modelid == "TUF-AX4200" || based_modelid == "TUF-AX6000" || based_modelid == "RT-AX59U" || based_modelid == "RT-AX52" || based_modelid == "PRT-AX57_GO" || based_modelid == "RT-AX57M"){
 			inputCtrl(document.form.wl_itxbf, 1);
 		}
 
@@ -967,7 +977,7 @@ function changeRSSI(_switch){
 var reboot_confirm=0;
 function applyRule(){
 	if(lantiq_support && wave_ready != 1){
-		alert("Please wait a minute for wireless ready");
+		alert(`<#Wireless_ready#>`);
 		return false;
 	}
 	
@@ -1144,8 +1154,7 @@ power_table_desc = ["<#WLANConfig11b_TxPower1#>", "<#WLANConfig11b_TxPower2#>", 
 //power_table_desc = ["Power Saving", "Fair", "Balance", "Good", "Performance"];
 //power_table_desc = ["省電", "弱", "平衡", "強", "效能"];
 function register_event(){
-	
-	$(function() {
+
 		$( "#slider" ).slider({
 			orientation: "horizontal",
 			range: "min",
@@ -1158,8 +1167,7 @@ function register_event(){
 			stop:function(event, ui){
 				set_power(ui.value);	  
 			}
-		}); 
-	});
+		});
 	
 	var array_temp = new Array(7);
 	var checked = 0
@@ -1991,6 +1999,16 @@ function checkWLReady(){
 							<select name="wl_ack_ratio" class="input_option">
 									<option value="0" <% nvram_match("wl_ack_ratio", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>
 									<option value="1" <% nvram_match("wl_ack_ratio", "1","selected"); %> ><#WLANConfig11b_WirelessCtrl_button1name#></option>
+							</select>
+						</td>
+					</tr>
+					<tr id="mlr_field" style="display:none;">
+						<th><a class="hintstyle" href="javascript:void(0);" onClick="">Xtra Range 2.0</a></th>
+						<td>
+							<select name="mlr_enable" class="input_option">
+								<option value="0" <% nvram_match("mlr_enable", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+								<option value="0" <% nvram_match("mlr_enable", "0","selected"); %> ><#WLANConfig11b_WirelessCtrl_buttonname#></option>
+								<option value="1" <% nvram_match("mlr_enable", "1","selected"); %> ><#WLANConfig11b_WirelessCtrl_button1name#></option>
 							</select>
 						</td>
 					</tr>

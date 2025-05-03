@@ -127,6 +127,24 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 			<wififw_type>3</wififw_type>
 		</entry>
 		<entry>
+			<machid>0x8040302</machid>
+			<board>AP-MP03.3-C4</board>
+			<spi_nand>false</spi_nand>
+			<memory>512M16_DDR3</memory>
+			<spruce_on_pcie_x2>false</spruce_on_pcie_x2>
+			<spruce_on_pcie_x1>false</spruce_on_pcie_x1>
+			<wififw_type>2</wififw_type>
+		</entry>
+		<entry>
+			<machid>0x8040402</machid>
+			<board>AP-MP03.3-C5</board>
+			<spi_nand>false</spi_nand>
+			<memory>512M16_DDR3</memory>
+			<spruce_on_pcie_x2>false</spruce_on_pcie_x2>
+			<spruce_on_pcie_x1>false</spruce_on_pcie_x1>
+			<wififw_type>2</wififw_type>
+		</entry>
+		<entry>
 			<machid>0x8040005</machid>
 			<board>AP-MP03.4-C1</board>
 			<spi_nand>false</spi_nand>

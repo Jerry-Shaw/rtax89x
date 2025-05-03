@@ -184,7 +184,7 @@ extern loff_t board_env_size;
  * MMC configs
  */
 #if !defined(CONFIG_ASUS_PRODUCT)
-#define CONFIG_QCA_MMC
+//#define CONFIG_QCA_MMC
 #endif
 
 #ifdef CONFIG_QCA_MMC
@@ -288,6 +288,8 @@ extern loff_t board_env_size;
 #endif
 
 #define CONFIG_FDT_FIXUP_PARTITIONS
+
+#define CONFIG_IPQ_FDT_FIXUP
 
 /*
  * USB Support

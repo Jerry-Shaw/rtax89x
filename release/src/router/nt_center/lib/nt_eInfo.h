@@ -153,10 +153,10 @@ struct eInfo mapInfo[] =
 	/* ------------------------------
 	   ### GENERAL Event ###
 	---------------------------------*/
-	{"GENERAL_WIFI_DEV_ONLINE"                   ,GENERAL_WIFI_DEV_ONLINE                     ,TYPE_OF_TURN_OFF   ,-1             ,ACT_NOTIFY_GENERAL | ACT_NOTIFY_IFTTT },
-	{"GENERAL_WIFI_DEV_OFFLINE"                  ,GENERAL_WIFI_DEV_OFFLINE                    ,TYPE_OF_TURN_OFF   ,-1             ,ACT_NOTIFY_GENERAL },
-	{"GENERAL_ETH_DEV_ONLINE"                    ,GENERAL_ETH_DEV_ONLINE                      ,TYPE_OF_TURN_OFF   ,-1             ,ACT_NOTIFY_GENERAL },
-	{"GENERAL_ETH_DEV_OFFLINE"                   ,GENERAL_ETH_DEV_OFFLINE                     ,TYPE_OF_TURN_OFF   ,-1             ,ACT_NOTIFY_GENERAL },
+	{"GENERAL_WIFI_DEV_ONLINE"                   ,GENERAL_WIFI_DEV_ONLINE                     ,TYPE_OF_TURN_OFF   ,-1             ,0 },
+	{"GENERAL_WIFI_DEV_OFFLINE"                  ,GENERAL_WIFI_DEV_OFFLINE                    ,TYPE_OF_TURN_OFF   ,-1             ,0 },
+	{"GENERAL_ETH_DEV_ONLINE"                    ,GENERAL_ETH_DEV_ONLINE                      ,TYPE_OF_TURN_OFF   ,-1             ,0 },
+	{"GENERAL_ETH_DEV_OFFLINE"                   ,GENERAL_ETH_DEV_OFFLINE                     ,TYPE_OF_TURN_OFF   ,-1             ,0 },
 	{"GENERAL_ETH_DEV_REFUSED"                   ,GENERAL_ETH_DEV_REFUSED                     ,TYPE_OF_TURN_OFF   ,-1             ,ACT_NOTIFY_GENERAL },
 	{"GENERAL_SYS_STATES"                        ,GENERAL_SYS_STATES                          ,TYPE_OF_TURN_OFF   ,-1             ,ACT_NOTIFY_GENERAL },
 	{"GENERAL_DEV_UPDATE"                        ,GENERAL_DEV_UPDATE                          ,TYPE_OF_TURN_OFF   ,-1             ,ACT_NOTIFY_GENERAL | ACT_NOTIFY_ALEXA },

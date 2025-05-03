@@ -10,6 +10,7 @@
 <link rel="icon" href="images/favicon.png">
 <link rel="stylesheet" type="text/css" href="css/main_login.css">
 <script type="text/javaScript" src="/js/jquery.js"></script>
+<script type="text/javascript" src="/js/https_redirect/https_redirect.js"></script>
 <title><#Web_Title#></title>
 <script>
 /* add Array.prototype.forEach() in IE8 */
@@ -137,7 +138,13 @@ else
 	var captcha_on = false;
 
 var faq_href = "https://nw-dlcdnet.asus.com/support/forward.html?model=&type=SG_TeleStand&lang=&kw=&num=";
+var ATEMODE = '<% nvram_get("ATEMODE"); %>';
+
 function initial(){
+	if(ATEMODE == "1"){
+		$(".login-title-desc").text(`<#Sign_in_title#>` + ` (ATE Mode)`);
+	}
+
 	/*handle sysdep for ROG or ODM product*/
 	if(odm_support){
 		document.getElementsByClassName("main-field-bg")[0].className = "main-field-bg-odm";

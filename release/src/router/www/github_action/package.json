@@ -1,0 +1,20 @@
+{
+  "type": "module",
+  "scripts": {
+    "check-pr": "node pr_js_syntax_check.mjs",
+    "check-all": "node all_js_syntax_check.mjs",
+    "check-lib": "node lib_js_syntax_check.mjs",
+    "check-html-all": "node all_html_js_syntax_check.mjs"
+  },
+  "devDependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/github": "^6.0.0",
+    "@html-eslint/eslint-plugin": "0.24.1",
+    "@html-eslint/parser": "0.24.1",
+    "cheerio": "1.0.0",
+    "eslint": "9.2.0",
+    "eslint-plugin-html": "8.1.1",
+    "globals": "15.2.0",
+    "octokit": "4.0.2"
+  }
+}

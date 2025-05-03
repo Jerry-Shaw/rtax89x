@@ -3,7 +3,8 @@ var qisPostData = {};
 var opModeObj = {
 	"sw_mode": "",
 	"wlc_psta": "",
-	"wlc_dpsta": ""
+	"wlc_dpsta": "",
+	"wlc_band": ""
 }
 
 var generalObj = {
@@ -48,6 +49,15 @@ var wanObj = {
 		"ipv6_service": "ipv6pt"
 	},
 
+	"dslite": {
+		"ipv6_service": "ipv6pt",
+		"wan_s46_dslite_mode": "0"
+	},
+
+	"v6opt": {
+		"ipv6_service": "ipv6pt"
+	},
+
 	"wan46": {
 		"wan_proto": "",
 		"ipv6_service": "ipv6pt"
@@ -64,8 +74,6 @@ var wanObj = {
 		"wan_dnsenable_x": "",
 		"wan_pppoe_username": "",
 		"wan_pppoe_passwd": "",
-		"wan_dhcpenable_x": "",
-		"wan_dnsenable_x": "",
 		"wan_ipaddr_x": "",
 		"wan_netmask_x": "",
 		"wan_gateway_x": "",
@@ -88,6 +96,13 @@ var lanObj = {
 	"general":{
 		"lan_proto": "",
 		"lan_dnsenable_x": ""
+	},
+
+	"changeSubnet": {
+		"lan_ipaddr": "",
+		"lan_ipaddr_rt": "",
+		"dhcp_start": "",
+		"dhcp_end": ""
 	},
 
 	"staticIp": {
@@ -125,7 +140,8 @@ var wirelessObj = {
 		"wl3_ssid": "",
 		"wl3_wpa_psk": "",
 		"wl3_auth_mode_x": "",
-		"wl3_crypto": ""
+		"wl3_crypto": "",
+		"wl3_mfp": ""
 	}
 }
 
@@ -149,6 +165,16 @@ var wlcObj = {
 	"wlc_key": "",
 	"wlc_ap_mac": ""
 }
+
+var wispObj = {
+	"sw_mode": "1",
+	"wlc_psta": "0",
+	"wlc_dpsta": "0",
+	"wans_dualwan": "wan none",
+	"wan_unit": "0",
+	"wan_hwaddr_x": ""
+}
+
 var wlcMultiObj = {
 	"wlc0" : {
 		"wlc0_band": "",
@@ -182,8 +208,20 @@ var wlcMultiObj = {
 		"wlc2_wep_key": "",
 		"wlc2_key": "",
 		"wlc2_ap_mac": ""
+	},
+	"wlc3" : {
+		"wlc3_band": "",
+		"wlc3_ssid": "",
+		"wlc3_auth_mode": "",
+		"wlc3_crypto": "",
+		"wlc3_wpa_psk": "",
+		"wlc3_wep": "",
+		"wlc3_wep_key": "",
+		"wlc3_key": "",
+		"wlc3_ap_mac": ""
 	}
 }
+
 var yandexObj = {
 	"yadns_enable_x": "",
 	"yadns_mode": ""	
@@ -340,7 +378,8 @@ var systemVariable = {
 		"profile_maximum" : false,
 		"profile_maximum_type" : "",
 		"is_dut_self" : false
-	}
+	},
+	"cfg_ready_check" : 0
 }
 
 var aimeshObj = {

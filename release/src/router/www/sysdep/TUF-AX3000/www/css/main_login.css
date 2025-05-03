@@ -1,7 +1,8 @@
 /* main_login.css */
 @font-face{
-	font-family: ROG;
-	src: url(/fonts/ROG_Fonts-Regular.otf) format("opentype");
+	font-family: Xolonium;
+        src: url(../fonts/xolonium.regular.woff) format("woff"),
+             url(../fonts/xolonium.regular.otf) format("opentype");
 }
 
 body, .p1, .form-input{
@@ -58,9 +59,9 @@ body{
 }
 .model-name{
 	height: 100%;
-	font-size: 48px;
+	font-size: 36px;
 	font-weight: bold;
-	font-family: ROG;
+	font-family: Xolonium;
 	margin-left: 25px;
 }
 .tuf_CN{

@@ -1049,7 +1049,11 @@ void set_rgbled(unsigned int mode)
 		"1 1 0 0",		/* RGBLED_NIAGARA_BLUE */
 		"0 1 1 0",		/* RGBLED_YELLOW */
 		"1 0 1 0",		/* RGBLED_PURPLE */
+#if RGBLED_WHITE == RGBLED_WLED
+		"0 0 0 1"		/* RGBLED_WHITE */
+#else
 		"1 1 1 1"		/* RGBLED_WHITE */
+#endif
 	};
 	char *udef_trigger = led_color[0];
 #ifdef RTCONFIG_SW_CTRL_ALLLED

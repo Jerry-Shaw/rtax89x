@@ -71,7 +71,7 @@ Confidential and Proprietary - Qualcomm Technologies, Inc.
 		</partition>
 		<partition>
 			<name length="16" type="string">rootfs</name>
-			<size_kb length="4">8832</size_kb>
+			<size_kb length="4">9152</size_kb>
 			<pad_kb length="2">0</pad_kb>
 			<which_flash length="2">0</which_flash>
 			<attr>0xFF</attr>

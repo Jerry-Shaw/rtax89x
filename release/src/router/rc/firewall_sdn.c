@@ -695,12 +695,12 @@ static int _write_UrlFilter(const int sdn_idx, const URLF_PF *urlf_pf, const cha
 
 			if (urlf_pf->mode == 1)
 			{
-				fprintf(fp, "-A %s -i %s -p udp --dport 53 -m string --icase --hex-string \"|04|asus|03|com|00|\" --algo bm -j ACCEPT\n", sdn_chain, ifname);
+				fprintf(fp, "-A %s -i %s -p udp --dport 53 -m string --icase --hex-string \"|0a|asusrouter|03|com|00|\" --algo bm -j ACCEPT\n", sdn_chain, ifname);
 				fprintf(fp, "-A %s -i %s -p udp --dport 53 -j DROP\n", sdn_chain, ifname);
 #ifdef RTCONFIG_IPV6
 				if (ipv6_enabled() && fp_ipv6)
 				{
-					fprintf(fp_ipv6, "-A %s -i %s -p udp --dport 53 -m string --icase --hex-string \"|04|asus|03|com|00|\" --algo bm -j ACCEPT\n", sdn_chain, ifname);
+					fprintf(fp_ipv6, "-A %s -i %s -p udp --dport 53 -m string --icase --hex-string \"|0a|asusrouter|03|com|00|\" --algo bm -j ACCEPT\n", sdn_chain, ifname);
 					fprintf(fp_ipv6, "-A %s -i %s -p udp --dport 53 -j DROP\n", sdn_chain, ifname);
 				}
 #endif

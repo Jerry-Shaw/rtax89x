@@ -94,7 +94,7 @@ int main(int argc, char ** argv) {
 #ifdef DBMULTI_dropbearconvert
 			"'dropbearconvert' - the key converter\n"
 #endif
-#ifdef DBMULTI_scp
+#if def DBMULTI_scp
 			"'scp' - secure copy\n"
 #endif
 			,

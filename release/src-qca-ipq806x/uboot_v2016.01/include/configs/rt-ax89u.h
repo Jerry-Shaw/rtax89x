@@ -21,7 +21,7 @@
 #define CONFIG_AQRMODEL		107	/* 113 A1,B0 or 107 */
 
 /* Set 1-st version number in accordance with SPF version. */
-#if SPFVER == 11 || SPFVER == 114
+#if SPFVER == 11 || SPFVER == 115
 #define CONFIG_METATOOLDIR	"build_ipq"
 #define KV1C			"2"
 #elif SPFVER == 111
@@ -48,12 +48,12 @@
 #endif
 
 #define CONFIG_UBI_SUPPORT
-#if SPFVER == 11 || SPFVER == 114
-#define CONFIG_BLVER		KV1C KV2C "23"
+#if SPFVER == 11 || SPFVER == 115
+#define CONFIG_BLVER		KV1C KV2C "25"
 #elif SPFVER == 113
-#define CONFIG_BLVER		KV1C KV2C "22"
+#define CONFIG_BLVER		KV1C KV2C "23"
 #elif SPFVER == 111
-#define CONFIG_BLVER		KV1C KV2C "21"
+#define CONFIG_BLVER		KV1C KV2C "22"
 #else
 #define CONFIG_BLVER		KV1C KV2C "16"
 #endif

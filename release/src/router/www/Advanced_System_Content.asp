@@ -14,13 +14,13 @@
 <link rel="stylesheet" type="text/css" href="pwdmeter.css">
 <link rel="stylesheet" type="text/css" href="device-map/device-map.css">
 <link rel="stylesheet" type="text/css" href="css/icon.css">
+<script type="text/javascript" src="/js/jquery.js"></script>
 <script language="JavaScript" type="text/javascript" src="/state.js"></script>
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
 <script language="JavaScript" type="text/javascript" src="/popup.js"></script>
 <script language="JavaScript" type="text/javascript" src="/help.js"></script>
 <script language="JavaScript" type="text/javascript" src="/client_function.js"></script>
 <script language="JavaScript" type="text/javascript" src="/validator.js"></script>
-<script language="JavaScript" type="text/javascript" src="/js/jquery.js"></script>
 <script language="JavaScript" type="text/javascript" src="/md5.js"></script>
 <script type="text/javascript" src="/js/httpApi.js"></script>
 <style>
@@ -301,7 +301,7 @@ function initial(){
 	}
 	else{
 
-		if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+		if((wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			$(".setup_info_icon.https").show();
 			$(".setup_info_icon.https").click(
 				function() {
@@ -326,7 +326,7 @@ function initial(){
 	if(ssh_support){
 		check_sshd_enable('<% nvram_get("sshd_enable"); %>');
 
-		if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+		if((wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			$(".setup_info_icon.ssh").show();
 			$(".setup_info_icon.ssh").click(
 				function() {
@@ -405,7 +405,27 @@ function initial(){
 		}
 	}
 
-	$("#https_download_cert").css("display", (le_enable != "1" && orig_http_enable != "0")? "": "none");
+	$("#https_download_cert").css("display", (orig_http_enable != "0")? "": "none");
+	if(orig_http_enable != "0"){
+		if(le_enable == "1"){
+			$("#download_cert_btn").css("display", "");
+			$("#clear_cert_btn").css("display", "none");
+			$("#download_cacert_btn").css("display", "none");
+			$("#clear_cacert_btn").css("display", "none");
+			$("#download_cacert_desc").css("display", "none");
+		}else if(le_enable == "2"){
+			$("#download_cert_btn").css("display", "");
+			if(document.form.casignedcert.value != "1"){
+				$("#clear_cert_btn").css("display", "none");
+				$("#download_cacert_btn").css("display", "none");
+			}else{
+				$("#clear_cert_btn").css("display", "");
+				$("#download_cacert_btn").css("display", "");
+			}
+			$("#clear_cacert_btn").css("display", "none");
+			$("#download_cacert_desc").css("display", "");
+		}
+	}
 
 	$("#login_captcha_tr").css("display", captcha_support? "": "none");
 
@@ -597,7 +617,7 @@ function applyRule(){
 
 		showLoading();
 
-		var action_script_tmp = "restart_time;restart_upnp;restart_leds;restart_uuacc;";
+		var action_script_tmp = "restart_time;restart_upnp;";
 
 		if(hdspindown_support)
 			action_script_tmp += "restart_usb_idle;";
@@ -655,7 +675,13 @@ function validForm(){
 			$('input[name="usb_idle_timeout"]').prop("disabled", true);
 		}
 	}
-	
+
+	if(document.form.time_zone_select.value == "select"){
+		alert(`<#JS_fieldblank#>`);
+		document.form.time_zone_select.focus();
+		return false;
+	}
+
 	if((document.form.time_zone_select.value.search("DST") >= 0 || document.form.time_zone_select.value.search("TDT") >= 0)			// DST area
 			&& document.form.dst_start_m.value == document.form.dst_end_m.value
 			&& document.form.dst_start_w.value == document.form.dst_end_w.value
@@ -680,7 +706,7 @@ function validForm(){
 			return false;
 		}
 
-		if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1 && document.form.sshd_enable.value == 1){
+		if((wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1 && document.form.sshd_enable.value == 1){
 			if (!validator.range_s46_ports(document.form.sshd_port, "none")){
 				if(!confirm(port_confirm)){
 					document.form.sshd_port.focus();
@@ -709,7 +735,7 @@ function validForm(){
 			if (!validator.range(document.form.misc_httpsport_x, 1024, 65535))
 				return false;
 
-			if ((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+			if ((wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 				if (!validator.range_s46_ports(document.form.misc_httpsport_x, "none")){
 					if(!confirm(port_confirm)){
 						document.form.misc_httpsport_x.focus();
@@ -832,6 +858,7 @@ function corrected_timezone(){
 }
 
 var timezones = [
+	["select",      "<#Select_menu_default#>"],
 	["UTC12",	"(GMT-12:00) <#TZ01#>"],
 	["UTC11",	"(GMT-11:00) <#TZ02#>"],
 	["UTC10",	"(GMT-10:00) <#TZ03#>"],
@@ -856,8 +883,8 @@ var timezones = [
 	["EBST3",	"(GMT-03:00) <#TZ21#>"],	//EBST3DST_1
 	["UTC3",	"(GMT-03:00) <#TZ22#>"],
 	["UTC3DST",     "(GMT-03:00) <#TZ87#>"],        //UTC2DST
-	["UTC2_1",	"(GMT-02:00) <#TZ23#>"],	//EBST3DST_2
 	["UTC2",	"(GMT-02:00) <#TZ24#>"],
+	["UTC2DST_1",	"(GMT-02:00) <#TZ23#>"],	//UTC2_1 //EBST3DST_2
 	["EUT1DST",	"(GMT-01:00) <#TZ25#>"],
 	["UTC1",	"(GMT-01:00) <#TZ26#>"],
 	["GMT0",	"(GMT) <#TZ27#>"],
@@ -897,12 +924,12 @@ var timezones = [
 	["UTC-4.30",	"(GMT+04:30) <#TZ52#>"],
 	["UTC-5",	"(GMT+05:00) <#TZ54#>"],
 	["UTC-5_1",	"(GMT+05:00) <#TZ53#>"],
+	["UTC-5_2",	"(GMT+05:00) <#TZ60#>, <#TZ58_2#>"],	//RFT-6
 	["UTC-5.30_2",	"(GMT+05:30) <#TZ55#>"],
 	["UTC-5.30_1",	"(GMT+05:30) <#TZ56#>"],
 	["UTC-5.30",	"(GMT+05:30) <#TZ59#>"],
 	["UTC-5.45",	"(GMT+05:45) <#TZ57#>"],
-	["RFT-6",	"(GMT+06:00) <#TZ60#>"],
-	["UTC-6",	"(GMT+06:00) <#TZ58#>"],
+	["UTC-6",	"(GMT+06:00) <#TZ58_1#>"],
 	["UTC-6.30",	"(GMT+06:30) <#TZ61#>"],
 	["UTC-7",	"(GMT+07:00) <#TZ62#>"],
 	["UTC-7_2",	"(GMT+07:00) <#TZ63#>"],
@@ -916,7 +943,7 @@ var timezones = [
 	["UTC-8_1",     "(GMT+08:00) <#TZ70#>"],
 	["UTC-9_1",	"(GMT+09:00) <#TZ70_1#>"],
 	["UTC-9_3",	"(GMT+09:00) <#TZ72#>"],
-	["JST",		"(GMT+09:00) <#TZ71#>"],
+	["JST-9",	"(GMT+09:00) <#TZ71#>"],
 	["CST-9.30",	"(GMT+09:30) <#TZ73#>"],
 	["UTC-9.30DST",	"(GMT+09:30) <#TZ74#>"],
 	["UTC-10DST_1",	"(GMT+10:00) <#TZ75#>"],
@@ -1042,23 +1069,39 @@ function hide_https_lanport(_value){
 		document.getElementById("https_access_page").style.display = 'none';
 	}
 
-
-	if(le_enable != "1" && _value != "0"){
+	if(_value != "0"){
 		$("#https_download_cert").css("display", "");
-		if(orig_http_enable == "0"){
-			$("#download_cert_btn").css("display", "none");
+		if(le_enable == "1"){
+			$("#download_cert_btn").css("display", "");
 			$("#clear_cert_btn").css("display", "none");
-			$("#download_cert_desc").css("display", "");
-		}
-		else{
+			$("#download_cacert_btn").css("display", "none");
+			$("#clear_cacert_btn").css("display", "none");
+			$("#download_cacert_desc").css("display", "none");
+		}else if (le_enable == "2"){
+			$("#download_cert_btn").css("display", "");
+			if(document.form.casignedcert.value != "1"){
+				$("#clear_cert_btn").css("display", "none");
+				$("#download_cacert_btn").css("display", "none");
+			}else{
+				$("#clear_cert_btn").css("display", "");
+				$("#download_cacert_btn").css("display", "");
+			}
+			$("#clear_cacert_btn").css("display", "none");
+			$("#download_cacert_desc").css("display", "");
+		}else{
 			$("#download_cert_btn").css("display", "");
 			$("#clear_cert_btn").css("display", "");
-			$("#download_cert_desc").css("display", "none");
+			$("#download_cacert_btn").css("display", "");
+			$("#clear_cacert_btn").css("display", "");
+			$("#download_cacert_desc").css("display", "");
 		}
-	}
-	else{
+		if(orig_http_enable == "0"){
+			$("#clear_cert_btn").css("display", "none");
+			$("#clear_cacert_btn").css("display", "none");
+		}
+	}else{
 		$("#https_download_cert").css("display", "none");
-	}
+ 	}
 }
 
 // show clientlist
@@ -1157,7 +1200,7 @@ function addRow(obj, upper){
 		obj.select();
 		return false;
 	}
-	else if(validator.validIPForm(obj, 2) != true){
+	else if(!validator.validIPForm(obj, 4)){
 		return false;
 	}
 	var access_type_value = 0;
@@ -1236,7 +1279,6 @@ function pullLANIPList(obj){
 function hideport(flag){
 	document.getElementById("accessfromwan_port").style.display = (flag == 1) ? "" : "none";
 	if(!HTTPS_support){
-		document.getElementById("NSlookup_help_for_WAN_access").style.display = (flag == 1) ? "" : "none";
 		var orig_str = document.getElementById("access_port_title").innerHTML;
 		document.getElementById("access_port_title").innerHTML = orig_str.replace(/HTTPS/, "HTTP");
 		document.getElementById("http_port").style.display = (flag == 1) ? "" : "none";
@@ -1639,8 +1681,12 @@ function reset_portconflict_hint(){
 	$("#port_conflict_httpslanport").hide();
 }
 
+function save_cacert_key(){
+	location.href = "cert.crt";
+}
+
 function save_cert_key(){
-	location.href = "cert.tar";
+	location.href = "cert_key.tar";
 }
 
 function clear_server_cert_key(){
@@ -1662,7 +1708,7 @@ function clear_server_cert_key(){
 }
 
 function clear_cert_key(){
-	if(confirm("Please export new Root Certificate and add it to \"Trusted Root Certification Authorization\". You may need to restart browser.")){<!-- untranslated -->
+	if(confirm(`<#DDNS_Install_Root_Cert_Desc#>`)){
 		$.ajax({url: "clear_file.cgi?clear_file_name=cert.tgz"})
 		showLoading();
 		setTimeout(function(){
@@ -2096,6 +2142,7 @@ function check_password_length(obj){
 <input type="hidden" name="reboot_schedule_enable" value="<% nvram_get("reboot_schedule_enable"); %>">
 <input type="hidden" name="shell_timeout" value="<% nvram_get("shell_timeout"); %>">
 <input type="hidden" name="http_lanport" value="<% nvram_get("http_lanport"); %>">
+<input type="hidden" name="casignedcert" value="<% nvram_get("casignedcert"); %>" disabled>
 <input type="hidden" name="sw_mode" value="<% nvram_get("sw_mode"); %>">
 <input type="hidden" name="ncb_enable" value="<% nvram_get("ncb_enable"); %>">
 <input type="hidden" name="dns_probe" value="<% nvram_get("dns_probe"); %>">
@@ -2161,7 +2208,7 @@ function check_password_length(obj){
 						<td colspan="2">Persistent JFFS2 partition</td>
 					</tr>
 				</thead>
-				<tr style="display:none;">
+				<tr>
 					<th>Format JFFS partition at next boot</th>
 					<td>
 						<input type="radio" name="jffs2_format" value="1" <% nvram_match("jffs2_format", "1", "checked"); %>><#checkbox_Yes#>
@@ -2537,10 +2584,15 @@ function check_password_length(obj){
 				<tr id="https_download_cert" style="display: none;">
 					<th><#Local_access_certificate_download#></th>
 					<td>
-						<input id="download_cert_btn" class="button_gen" onclick="save_cert_key();" type="button" value="<#btn_Export#>" />
-						<input id="clear_server_cert_btn" class="button_gen" style="margin-left:10px" onclick="clear_server_cert_key();" type="button" value="<#CTL_renew#> <#vpn_openvpn_KC_SA#>" /><!-- untranslated -->
-						<input id="clear_cert_btn" class="button_gen" style="margin-left:10px" onclick="clear_cert_key();" type="button" value="<#CTL_renew#> Root Certificate" /><!-- untranslated -->
-						<span id="download_cert_desc"><#Local_access_certificate_desc#></span><a id="creat_cert_link" href="" style="font-family:Lucida Console;text-decoration:underline;color:#FFCC00; margin-left: 5px;" target="_blank">FAQ</a>
+						<div style="display: flex;">
+							<input id="download_cert_btn" class="button_gen" onclick="save_cert_key();" type="button" value="<#btn_Export#> <#vpn_openvpn_KC_SA#>" />
+							<input id="clear_cert_btn" class="button_gen" style="margin-left:10px" onclick="clear_server_cert_key();" type="button" value="<#CTL_renew#> <#vpn_openvpn_KC_SA#>" /><!-- untranslated -->
+						</div>
+						<div style="display: flex;">
+							<input id="download_cacert_btn" class="button_gen" style="margin-top:10px" onclick="save_cacert_key();" type="button" value="<#btn_Export#> Root Certificate" />
+							<input id="clear_cacert_btn" class="button_gen" style="margin-left:10px;margin-top:10px" onclick="clear_cert_key();" type="button" value="<#CTL_renew#> Root Certificate" /><!-- untranslated -->
+ 						</div>
+						<span id="download_cacert_desc"><#Local_access_certificate_desc#></span><a id="creat_cert_link" href="" style="font-family:Lucida Console;text-decoration:underline;color:#FFCC00; margin-left: 5px;" target="_blank">FAQ</a>
 					</td>
 				</tr>
 			</table>
@@ -2559,7 +2611,6 @@ function check_password_length(obj){
 						<span class="formfontdesc" id="WAN_access_hint" style="color:#FFCC00; display:none;"><#FirewallConfig_x_WanWebEnable_HTTPS_only#> 
 							<a id="faq" href="" target="_blank" style="margin-left: 5px; color:#FFCC00; text-decoration: underline;">FAQ</a>
 						</span>
-						<div class="formfontdesc" id="NSlookup_help_for_WAN_access" style="color:#FFCC00; display:none;"><#NSlookup_help#></div>
 					</td>
 				</tr>
 				<tr id="accessfromwan_port">
@@ -2600,7 +2651,7 @@ function check_password_length(obj){
 					<!-- client info -->
 					<td width="10%">-</td>
 					<td width="40%">
-						<input type="text" class="input_25_table" maxlength="18" name="http_client_ip_x_0"  onKeyPress="" onClick="hideClients_Block();" autocorrect="off" autocapitalize="off">
+						<input type="text" class="input_25_table" maxlength="39" name="http_client_ip_x_0"  onKeyPress="" onClick="hideClients_Block();" autocorrect="off" autocapitalize="off">
 						<img id="pull_arrow" height="14px;" src="/images/arrow-down.gif" style="position:absolute;*margin-left:-3px;*margin-top:1px;" onclick="pullLANIPList(this);" title="<#select_client#>">	
 						<div id="ClientList_Block_PC" class="clientlist_dropdown" style="margin-left:27px;width:235px;"></div>	
 					</td>
@@ -2636,3 +2687,4 @@ function check_password_length(obj){
 <div id="footer"></div>
 </body>
 </html>
+

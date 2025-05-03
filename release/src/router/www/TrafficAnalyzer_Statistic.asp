@@ -24,7 +24,7 @@
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <script type="text/javascript" src="/popup.js"></script>
 <script type="text/javascript" src="/js/httpApi.js"></script>
-<script language="JavaScript" type="text/javascript" src="/js/asus_eula.js"></script>
+<script language="JavaScript" type="text/javascript" src="/js/asus_policy.js"></script>
 <style>
 *{
 	box-sizing: content-box;
@@ -122,8 +122,6 @@ function initial(){
 
 	$('#traffic_unit').val(getTrafficUnit());
 
-	if(!ASUS_EULA.status("tm"))
-		ASUS_EULA.config(eula_confirm, cancel);
 }
 
 var date_string = "";
@@ -1476,13 +1474,8 @@ function eula_confirm(){
 	  document.form.TM_EULA.value = 1;
     }
 
-        if(!dns_dpi_support) {
-	  document.form.bwdpi_db_enable.value = 1;
-	  document.form.nfcm.value = 1; //align user experince during upgrade/download
-        } else {
-          document.form.nfcm_enable.value = 1;
-	  document.form.bwdpi_db_enable.value = 1; // align user epxerience
-        }
+    document.form.bwdpi_db_enable.value = 1;
+    document.form.nfcm_enable.value = 1;
 	document.form.action_wait.value = "15";
 	applyRule();
 }
@@ -1495,23 +1488,25 @@ function cancel(){
 }
 function switch_control(_status){
 	if(_status) {
-              if(!dns_dpi_support){
-		if(reset_wan_to_fo.check_status()) {
-			if(ASUS_EULA.check("tm")){
-				document.form.bwdpi_db_enable.value = 1;
-				document.form.nfcm_enable.value = 1; //align user experience
-				applyRule();
-			}
-		}
-		else
-			cancel();
-               }
-              else {
-
-				document.form.bwdpi_db_enable.value = 1; // align user experience
-				document.form.nfcm_enable.value = 1;
-				applyRule();
-               }
+        if(!dns_dpi_support){
+            if(reset_wan_to_fo.check_status()) {
+                if(policy_status.TM == 0 || policy_status.TM_time == ''){
+                    const policyModal = new PolicyModalComponent({
+                        policy: "TM",
+                        agreeCallback: eula_confirm,
+                        disagreeCallback: cancel
+                    });
+                    policyModal.show();
+                }else{
+                    eula_confirm();
+                }
+            }else
+                cancel();
+        }else {
+            document.form.bwdpi_db_enable.value = 1; // align user experience
+            document.form.nfcm_enable.value = 1;
+            applyRule();
+        }
 	}
 	else {
 		if(!dns_dpi_support) {

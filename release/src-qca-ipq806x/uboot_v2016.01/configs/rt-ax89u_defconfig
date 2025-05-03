@@ -74,7 +74,7 @@ CONFIG_CMD_FLASH=y
 # CONFIG_CMD_I2C is not set
 # CONFIG_CMD_USB is not set
 CONFIG_CMD_FPGA=y
-CONFIG_CMD_MMC=y
+# CONFIG_CMD_MMC is not set
 
 #
 # Shell scripting commands

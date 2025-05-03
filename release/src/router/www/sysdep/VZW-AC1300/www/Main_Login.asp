@@ -8,6 +8,8 @@
 <meta HTTP-EQUIV="Expires" CONTENT="-1">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <link rel="icon" href="images/favicon.png">
+<script type="text/javascript" src="/js/jquery.js"></script>
+<script type="text/javascript" src="/js/https_redirect/https_redirect.js"></script>
 <title>ASUS Login</title>
 <style>
 html{
@@ -237,8 +239,15 @@ var chdom = function(){window.location.href=domainNameUrl};
 	}
 })();
 
+var ATEMODE = '<% nvram_get("ATEMODE"); %>';
+
 function initial(){
 	var flag = login_info.error_status;
+
+	if(ATEMODE == "1"){
+		$(".div_td.signin_hint").text(`<#CTL_signin#>` + ` (ATE MODE)`);
+	}
+
 	if(isIE8 || isIE9){
 		document.getElementById("name_title_ie").style.display ="";
 		document.getElementById("password_title_ie").style.display ="";
@@ -445,7 +454,7 @@ function checkTime(i){
 			<div class="div_td img_gap">
 				<div class="login_img"></div>
 			</div>
-			<div class="div_td"><#CTL_signin#></div>
+			<div class="div_td signin_hint"><#CTL_signin#></div>
 		</div>	
 		<div class="prod_madelName"><#Web_Title2#></div>
 

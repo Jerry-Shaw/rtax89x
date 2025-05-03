@@ -93,9 +93,6 @@ ifeq ($(RTCONFIG_DEBUG),y)
 endif
 
 	$(MAKE) certs-install
-ifeq ($(RTCONFIG_LETSENCRYPT),y)
-	install -m 0644 certs/DST_Root_CA_X3.pem $(INSTALLDIR)/rom/etc/ssl/certs/letsencrypt.pem
-endif
 ifeq ($(RTCONFIG_APP_FILEFLEX),y)
 	install -m 0644 ipkg.conf $(INSTALLDIR)/rom/ipkg.conf
 endif
@@ -375,7 +372,7 @@ else
 	rm -f $(INSTALLDIR)/rom/etc/profile.hnd
 endif
 
-ifeq ($(RTCONFIG_TPVPN),y)
+ifeq ($(RTCONFIG_HMA),y)
 	mkdir -p $(INSTALLDIR)/rom/vpn
 	install -m 0644 vpn/HMA_TCP.JSON $(INSTALLDIR)/rom/vpn/HMA_TCP.JSON
 	install -m 0644 vpn/HMA_UDP.JSON $(INSTALLDIR)/rom/vpn/HMA_UDP.JSON
@@ -406,6 +403,9 @@ endif
 
 ifeq ($(RTAX86U), y)
 	install -m 0755 9873w_b0-b4.bin $(INSTALLDIR)/rom
+endif
+ifeq ($(RTCONFIG_GEARUPPLUGIN),y)
+	install -m 0755 gearup_script/guplugin_monitor.sh $(INSTALLDIR)/usr/sbin
 endif
 
 .PHONY: dummy

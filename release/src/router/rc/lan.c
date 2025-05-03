@@ -2486,7 +2486,7 @@ _dprintf("nat_rule: stop_nat_rules 1.\n");
 #endif
 
 #ifdef RTCONFIG_AMAS_WGN
-	int wgn;
+	int wgn __attribute__((unused));
 	wgn_check_subnet_conflict();
 	wgn_check_avalible_brif();
 	wgn=wgn_start();
@@ -4571,6 +4571,12 @@ void stop_lan_wl(void)
 				stop_wds_ra(lan_ifname, ifname);
 				wlconf_ra_down(ifname);
 			}
+
+#if defined(RTCONFIG_MT798X)
+			if (!strncmp(ifname, "lan", 3)
+			 || (!strncmp(ifname, "bond", 4) && isdigit(ifname[4])))
+				continue;
+#endif
 #elif defined(RTCONFIG_QCA)
 				/* do nothing */
 #elif defined(RTCONFIG_REALTEK)
@@ -4888,6 +4894,12 @@ void start_lan_wl(void)
 				else if (wl_ioctl(ifname, WLC_GET_INSTANCE, &unit, sizeof(unit))) {
 					continue;
 				}
+#elif defined RTCONFIG_RALINK
+#if defined(RTCONFIG_MT798X)
+				if (!strncmp(ifname, "lan", 3)
+				 || (!strncmp(ifname, "bond", 4) && isdigit(ifname[4])))
+					continue;
+#endif
 #endif
 
 #if defined(RTCONFIG_REALTEK)
@@ -5580,7 +5592,7 @@ void restart_wl(void)
 
 void lanaccess_mssid(const char *limited_ifname, int mode)
 {
-	char lan_subnet[32], lifname[IFNAMSIZ];
+	char lan_subnet[32], lifname[IFNAMSIZ], *add_del = mode ? "-A" : "-D";
 
 #ifdef RTCONFIG_AMAS_WGN
 	char lan_ipaddr[16] = {0}, lan_netmask[16] = {0};
@@ -5610,11 +5622,11 @@ void lanaccess_mssid(const char *limited_ifname, int mode)
 	else
 		snprintf(limited_ifname_real, sizeof(limited_ifname_real), "%s", lifname);
 
-	eval("ebtables", mode ? "-A" : "-D", "FORWARD", "-i", ifname_real, "-j", "DROP"); //ebtables FORWARD: "for frames being forwarded by the bridge"
-	eval("ebtables", mode ? "-A" : "-D", "FORWARD", "-o", ifname_real, "-j", "DROP"); // so that traffic via host and nat is passed
+	eval("ebtables", add_del, "FORWARD", "-i", ifname_real, "-j", "DROP"); //ebtables FORWARD: "for frames being forwarded by the bridge"
+	eval("ebtables", add_del, "FORWARD", "-o", ifname_real, "-j", "DROP"); // so that traffic via host and nat is passed
 
 	snprintf(lan_subnet, sizeof(lan_subnet), "%s/%s", nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"));
-	eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", ifname_real, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-proto", "tcp", "-j", "DROP");
+	eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", ifname_real, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-proto", "tcp", "-j", "DROP");
 #else
 	snprintf(cap_subnet, sizeof(cap_subnet), "%s/%s", nvram_safe_get("lan_ipaddr"), nvram_safe_get("lan_netmask"));
 
@@ -5628,8 +5640,8 @@ void lanaccess_mssid(const char *limited_ifname, int mode)
 		if (!is_router_mode())
 #endif
 		{
-			eval("ebtables", mode ? "-A" : "-D", "FORWARD", "-i", lifname, "-j", "DROP"); //ebtables FORWARD: "for frames being forwarded by the bridge"
-			eval("ebtables", mode ? "-A" : "-D", "FORWARD", "-o", lifname, "-j", "DROP"); // so that traffic via host and nat is passed
+			eval("ebtables", add_del, "FORWARD", "-i", lifname, "-j", "DROP"); //ebtables FORWARD: "for frames being forwarded by the bridge"
+			eval("ebtables", add_del, "FORWARD", "-o", lifname, "-j", "DROP"); // so that traffic via host and nat is passed
 		}
  	}
 
@@ -5646,40 +5658,55 @@ void lanaccess_mssid(const char *limited_ifname, int mode)
 
 #ifdef RTCONFIG_CAPTIVE_PORTAL
 	if(nvram_match("captive_portal_enable", "on") || nvram_match("captive_portal_adv_enable", "on")){
-	   eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-dport", "8083", "--ip-proto", "tcp", "-j", "ACCEPT");
+	   eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-dport", "8083", "--ip-proto", "tcp", "-j", "ACCEPT");
 
-	 //  eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-dport", "!", "443", "--ip-proto", "tcp", "-j", "ACCEPT");
+	 //  eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-dport", "!", "443", "--ip-proto", "tcp", "-j", "ACCEPT");
 	}
 #endif
+
 #ifdef RTCONFIG_AMAS_WGN
 	if (s1 != NULL)
-		eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-proto", "icmp", "--ip-dst", lan_ipaddr, "-j", "ACCEPT");
+		eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4",
+			"--ip-proto", "icmp", "--ip-dst", lan_ipaddr, "-j", "ACCEPT");
 	else
-		eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-proto", "icmp", "--ip-dst", nvram_safe_get("lan_ipaddr"), "-j", "ACCEPT");
+		eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4",
+			"--ip-proto", "icmp", "--ip-dst", nvram_safe_get("lan_ipaddr"), "-j", "ACCEPT");
 #else  	/* RTCONFIG_AMAS_WGN */
-	eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-proto", "icmp", "--ip-dst", nvram_safe_get("lan_ipaddr"), "-j", "ACCEPT");
+	eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4",
+		"--ip-proto", "icmp", "--ip-dst", nvram_safe_get("lan_ipaddr"), "-j", "ACCEPT");
 #endif	/* RTCONFIG_AMAS_WGN */
-	eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-proto", "icmp", "--ip-dst", lan_subnet, "-j", "DROP");
+	eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4",
+		"--ip-proto", "icmp", "--ip-dst", lan_subnet, "-j", "DROP");
+
 	if (strcmp(lan_subnet, cap_subnet))
-		eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-proto", "icmp", "--ip-dst", cap_subnet, "-j", "DROP");
+		eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-proto", "icmp", "--ip-dst", cap_subnet, "-j", "DROP");
+
 #ifdef RTCONFIG_FBWIFI
-	if(sw_mode() == SW_MODE_ROUTER){
-		eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-dport", "!", "8084", "--ip-proto", "tcp", "-j", "DROP");
-	}
-	else{
-		eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-proto", "tcp", "-j", "DROP");
+	if (sw_mode() == SW_MODE_ROUTER){
+		eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4",
+			"--ip-dst", lan_subnet, "--ip-dport", "!", "8084", "--ip-proto", "tcp",
+			"-j", "DROP");
+	} else {
+		eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4",
+			"--ip-dst", lan_subnet, "--ip-proto", "tcp", "-j", "DROP");
 	}
 #else
 #ifdef RTCONFIG_DNSPRIVACY
 	if (nvram_get_int("dnspriv_enable")) {
-		eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-dport", "53", "--ip-proto", "tcp", "-j", "ACCEPT");
+		eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4",
+			"--ip-dst", lan_subnet, "--ip-dport", "53", "--ip-proto", "tcp", "-j", "ACCEPT");
 		if (strcmp(lan_subnet, cap_subnet))
-			eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", cap_subnet, "--ip-dport", "53", "--ip-proto", "tcp", "-j", "ACCEPT");
+			eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname,
+				"-p", "ipv4", "--ip-dst", cap_subnet, "--ip-dport", "53",
+				"--ip-proto", "tcp", "-j", "ACCEPT");
 	}
 #endif
-	eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", lan_subnet, "--ip-proto", "tcp", "-j", "DROP");
+	eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4",
+		"--ip-dst", lan_subnet, "--ip-proto", "tcp", "-j", "DROP");
+
 	if (strcmp(lan_subnet, cap_subnet))
-		eval("ebtables", "-t", "broute", mode ? "-A" : "-D", "BROUTING", "-i", lifname, "-p", "ipv4", "--ip-dst", cap_subnet, "--ip-proto", "tcp", "-j", "DROP");
+		eval("ebtables", "-t", "broute", add_del, "BROUTING", "-i", lifname, "-p", "ipv4",
+			"--ip-dst", cap_subnet, "--ip-proto", "tcp", "-j", "DROP");
 #endif
 #endif	/* RTAC87U */
 }
@@ -5979,6 +6006,9 @@ void restart_wireless(void)
 #endif
 
 
+#if defined(RTCONFIG_MT798X)
+	record_NOP();
+#endif
 #ifdef RTCONFIG_WIFI_SON
 	if ((sw_mode()!=SW_MODE_REPEATER && (nvram_get_int("sw_mode")==SW_MODE_ROUTER || nvram_match("cfg_master", "1")) && nvram_get_int("x_Setting") && start_cap(1)==0) && nvram_match("wifison_ready", "1")) {
 		file_unlock(lock);
@@ -6373,6 +6403,8 @@ void restart_wireless(void)
 #ifdef RTCONFIG_CFGSYNC
 	send_event_to_cfgmnt(EID_RC_RESTART_WIRELESS);
 #endif
+	restore_wan_ebtables_rules();
+	restart_qos_if_bwlim_enabled();
 }
 
 #ifdef RTCONFIG_BCM_7114
@@ -6799,7 +6831,7 @@ void set_onboarding_vif_status()
 		snprintf(prefix, sizeof(prefix), "wl%d_", unit);
 	}
 
-	if (nvram_match(strcat_r(prefix, "auth_mode_x", tmp), "sae")) {
+	if (nvram_match(strcat_r(prefix, "auth_mode_x", tmp), "sae") || nvram_match(strcat_r(prefix, "closed", tmp), "1")) {
 		snprintf(wl_radio, sizeof(wl_radio), "wl%d_radio", unit);
 		if (nvram_get_int(wl_radio)) //radio on
 			nvram_set_int("obvif_bss", 1);
@@ -6810,3 +6842,4 @@ void set_onboarding_vif_status()
 		nvram_set_int("obvif_bss", 0);
 }
 #endif
+

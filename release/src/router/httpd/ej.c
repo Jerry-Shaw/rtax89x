@@ -16,15 +16,6 @@
  */
 /*
  * Tiny Embedded JavaScript parser
- *
- * Copyright 2003, ASUSTeK Inc.
- * All Rights Reserved.		
- *				     
- * This is UNPUBLISHED PROPRIETARY SOURCE CODE of ASUSTeK Inc.;   
- * the contents of this file may not be disclosed to third parties, copied
- * or duplicated in any form, in whole or in part, without the prior      
- * written permission of ASUSTeK Inc..			    
- *
  */
 
 #include <stdio.h>
@@ -217,7 +208,13 @@ extern void replace_productid(char *GET_PID_STR, char *RP_PID_STR, int len){
 	if(strlen(RP_PID_STR))
 		return;
 
-	if ((p_temp = strstr(GET_PID_STR, "ZenWiFi_")) && !strncmp(nvram_safe_get("preferred_lang"), "CN", 2)) {
+	if(!strcmp(GET_PID_STR,"RT-AX57M") && !strcmp(nvram_safe_get("preferred_lang"), "CN")){
+		if(!strcmp(nvram_safe_get("CoBrand"), "5"))
+			strlcpy(RP_PID_STR, "RT-AX57 青春版", len);
+		else
+			strlcpy(RP_PID_STR, "RT-AX57 热血版", len);
+	}
+	else if ((p_temp = strstr(GET_PID_STR, "ZenWiFi_")) && !strncmp(nvram_safe_get("preferred_lang"), "CN", 2)) {
 		p_temp += strlen("ZenWiFi_");
 		snprintf(RP_PID_STR, len, "灵耀%s", p_temp);
 	}

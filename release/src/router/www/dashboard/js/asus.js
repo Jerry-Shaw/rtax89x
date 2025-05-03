@@ -117,7 +117,7 @@ var system = (function () {
             return { id: 'RT', desc: '<#wireless_router#>' };
         } else if (sw_mode === '3' && wlc_psta === '0') {
             // Access Point
-            return { id: 'AP', desc: '<#OP_AP_item#>' };
+            return { id: 'AP', desc: `<#OP_AP_item#>` };
         } else if ((sw_mode === '2' && wlc_psta === '0') || (sw_mode === '3' && wlc_psta === '2')) {
             // Repeater
             return { id: 'RE', desc: '<#OP_RE_item#>' };

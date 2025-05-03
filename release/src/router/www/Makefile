@@ -9,6 +9,7 @@ MODELS_HAVE_TRAFFIC_ANALYZER = RT-AC3200 RT-AC87U RT-AC88U RT-AX88U RT-AC86U GT-
 	RT-AX86U RT-AX68U RT-AC68U_V4 DSL-AX82U \
 	RT-AX86U_PRO \
 	MAP-AC2200 MAP-AC2200V RT-AC95U \
+	PL-AX56_XP4 \
 	RT-AXE7800 \
 	GT-AXE11000 4G-AC86U GT-AX11000_PRO 4G-AX56 ET12 XT12 GT-AXE16000 GT-AX6000 XC5
 
@@ -86,6 +87,7 @@ endif
 	rm -rf $(INSTALLDIR)/www/device-map/compatibility.asp
 	cp -rf $(INSTALLDIR)/www/images/new/* $(INSTALLDIR)/www/images/
 	rm -rf $(INSTALLDIR)/www/images/new
+	rm -rf $(INSTALLDIR)/www/github_action
 
 ifeq ($(RTCONFIG_ROG_UI), y)
 	cp -r $(TOP)/www/sysdep/FUNCTION/ROG_UI/* $(INSTALLDIR)/www/
@@ -176,6 +178,11 @@ ifeq ($(BUILD_NAME),GT10)
 endif
 	rm -rf $(INSTALLDIR)/www/light_effect/sysdep_css
 endif
+endif
+
+ifeq ($(RTCONFIG_TS_UI),y)
+	rm -rf $(INSTALLDIR)/TS_UI
+	cp -rf $(TOP)/www/sysdep/FUNCTION/TS_UI $(INSTALLDIR)/
 endif
 
 	chmod -x `find $(INSTALLDIR)/www/ -name "*.asp"`
@@ -825,8 +832,6 @@ endif
 
 ifneq ($(RTCONFIG_ROG_UI),y)
 ifneq ($(BUILD_NAME), $(filter $(BUILD_NAME), TUF-AX3000 TUF-AX3000_V2 TUF-AX4200 TUF-AX5400 TUF-AX6000))
-	rm -rf $(INSTALLDIR)/www/fonts/ROG_Fonts-Regular.otf
-	rm -rf $(INSTALLDIR)/www/fonts/ROG_Fonts-Regular.woff
 	rm -rf $(INSTALLDIR)/www/fonts/xolonium.regular.otf
 	rm -rf $(INSTALLDIR)/www/fonts/xolonium.regular.woff
 endif
@@ -977,11 +982,6 @@ ifneq ($(RTCONFIG_DNSQUERY_INTERCEPT),y)
 	rm -rf $(INSTALLDIR)/www/getAppTraffic_Dns.asp
 endif
 
-ifeq ($(RTCONFIG_TS_UI),y)
-	rm -rf $(INSTALLDIR)/TS_UI
-	cp -rf $(TOP)/www/sysdep/FUNCTION/TS_UI $(INSTALLDIR)/
-endif
-
 ifeq ($(BUILD_NAME),TUF-AX6000)
 	@if [ -d $(INSTALLDIR)/www/images/TX-AX6000 ] ; then \
 		rm -rf $(INSTALLDIR)/TX-AX6000; \
@@ -999,3 +999,4 @@ endif
 ifeq ($(RAX120),y)
 	cp ../www/sysdep/$(SWRT_NAME)/www $(INSTALLDIR)/. -rfL || true
 endif
+

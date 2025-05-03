@@ -670,7 +670,7 @@ extern int getrssi(int band);
 extern int getChannel(int band);
 extern int startScan(int band);
 extern int getSiteSurveyVSIEcount(int band);
-extern int getSiteSurveyVSIE(int band, struct _SITESURVEY_VSIE *result, int length);
+extern int getSiteSurveyVSIE(int band, char *buf, int len);
 extern int getBSSID(int band);
 extern int asuscfe(const char *PwqV, const char *IF);
 extern int wps_pin(int pincode);
@@ -1395,11 +1395,34 @@ extern void dsl_defaults_x();
 
 /* conn_diag-sql.c */
 #if defined(RTCONFIG_CONNDIAG)
+#include <cosql_utils.h>
+#include "conn_diag-sql.h"
 extern void init_db_related(void);
 extern void check_dir(void);
 extern void db_size_check(void);
 extern int update_cablediag_status_to_running_all_nodes(void);
-#endif
+extern int update_cablediag_status_to_running(const char *node_mac);
+extern int update_port_status_table_cablediag(int columns_count, sql_column_t* columns);
+extern int update_port_status_table(int columns_count, sql_column_t* columns);
+extern int update_port_status_usb_table(int columns_count, sql_column_t* columns);
+extern int update_port_status_moca_table(int columns_count, sql_column_t* columns);
+extern int update_stainfo_table(int columns_count, sql_column_t* columns);
+extern struct json_object* get_byte_field_string_json_object(unsigned char value, char *buf, int buf_len);
+extern struct json_object* get_int_field_string_json_object(int value, char *buf, int buf_len);
+extern struct json_object* get_uint_field_string_json_object(unsigned int value, char *buf, int buf_len);
+extern struct json_object* get_uint64_field_string_json_object(unsigned long long value, char *buf, int buf_len);
+extern struct json_object* get_rate_field_string_json_object(double value, char *buf, int buf_len);
+extern int _get_node_eth_port_status(char *node_mac,char **buf);
+extern int save_port_status_to_file();
+extern int load_port_status_from_file(struct amas_eth_port_table **amas_eth_port_list);
+extern int exec_iperf (char* caller, char *server_mac, char *client_mac);
+#ifdef RTCONFIG_AWSIOT
+extern long long current_timestamp();
+extern int wifi_dfs_process(int columns_count, sql_column_t* columns);
+extern int wifi_dfs_on_all_channels_process();
+extern int wifi_cbp_process(int columns_count, sql_column_t* columns);
+#endif	/* RTCONFIG_AWSIOT */
+#endif	/* RTCONFIG_CONNDIAG */
 
 // init.c
 extern int init_main(int argc, char *argv[]);
@@ -1522,6 +1545,9 @@ extern int do_dns_detect(int wan_unit);
 #ifdef DSL_AC68U
 extern int check_wan_if(int unit);
 #endif
+extern void start_dhcpfilter(const char *ifname);
+extern void stop_dhcpfilter(const char *ifname);
+extern void restore_wan_ebtables_rules(void);
 
 // lan.c
 extern void update_lan_state(int state, int reason);
@@ -2346,7 +2372,8 @@ extern void stop_ipv6_tunnel(void);
 #define S46_LOG_PATH	"/jffs/s46.log"
 #define S46_RETRY_TIME	3
 enum S46_SVRURL_TYPE {
-	GET_NTT_HGW_URL			= 0,
+	GET_JPIX_HGW_URL		= 0,
+	GET_BIGLOB_HGW_URL,
 	GET_V6PLUS_URL,
 	SET_V6PLUS_URL,
 	GET_OCNVC_URL
@@ -2359,12 +2386,17 @@ enum S46_MAPSVR_STATE {
 	S46_MAPSVR_NO_RESPONSE		= 4,
 	S46_MAPSVR_MAX
 };
+enum DSLITE_SVC_TYPE {
+	DSLITE_CUSTOMER			= 0,
+	DSLITE_XPASS			= 1,
+	DSLITE_TRANSIX_EAST		= 2,
+	DSLITE_TRANSIX_WEST		= 3
+};
 extern int s46_mapcalc(int wan_unit, int wan_proto, char *rules, char *peerbuf, size_t peerbufsz,
 		       char *addr6buf, size_t addr6bufsz, char *addr4buf, size_t addr4bufsz,
 		       int *poffset, int *ppsidlen, int *ppsid, char **fmrs, int draft);
 extern void start_s46_tunnel(int unit);
 extern void stop_s46_tunnel(int unit, int unload);
-extern int wan_hgw_detect(const int wan_unit, const char *wan_ifname, const char *prc);
 
 extern void s46reset(int unit);
 extern void start_v6plusd(int unit);
@@ -2373,9 +2405,13 @@ extern void restart_v6plusd(int unit);
 extern void start_ocnvcd(int unit);
 extern void stop_ocnvcd(int unit);
 extern void restart_ocnvcd(int unit);
+extern void start_dslited(int unit);
+extern void stop_dslited(int unit);
+extern void restart_dslited(int unit);
 extern void start_auto46det(void);
 extern void stop_auto46det(void);
 //s46comm.c
+extern void _restart_wan_if(const int unit);
 extern void s46print(const char *logpath, const char *format, ...);
 #define S46_DBG(fmt, args...) \
 	do { \
@@ -2384,8 +2420,12 @@ extern void s46print(const char *logpath, const char *format, ...);
 extern int _nvram_check(const char *name, const char *value);
 extern int _nvram_set_check(const char *name, const char *value);
 extern int wan46det(int unit);
+extern int dslite_svc_check(const char *addr);
 extern int ce_dad_check(int unit);
 extern int s46_ntt_hgw(int unit);
+extern int wan_hgw_detect(const int wan_unit, const char *wan_ifname, const char *prc);
+extern int is_v6addr(const char *input);
+extern char *get_AFTR_addr(const char *host, char *ip, size_t iplen);
 extern char *get_s46_ra(int unit);
 extern char *get_s46_url(char *s, int sz, int type, ...);
 extern char *calc_s46_port_range(int usable, int psid, int psidlen, int offset, char *ret, int retsz);
@@ -2393,14 +2433,18 @@ extern void fmrs2file(int unit);
 extern void init_wan46(void);
 // v6plusd.c
 #define V6PLUSD_PIDFILE "/var/run/v6plusd.%d.pid"
-extern char *s46_jpne_maprules(char *id, char *idbuf, size_t idlen, long *rsp_code);
+extern char *get_jpix_map(const int wan_unit, char *id, char *idbuf, size_t idlen, long *rsp_code);
 extern int check_v6plusd(int unit);
 extern int v6plusd_main(int argc, char **argv);
 // ocnvcd.c
 #define OCNVCD_PIDFILE "/var/run/ocnvcd.%d.pid"
-extern char *s46_ocn_maprules(char *v6perfix, int prefixlen, long *rsp_code);
+extern char *get_ocn_map(const int wan_unit, char *v6perfix, int prefixlen, long *rsp_code);
 extern int check_ocnvcd(int unit);
 extern int ocnvcd_main(int argc, char **argv);
+// dslited.c
+#define DSLITED_PIDFILE "/var/run/dslited.%d.pid"
+extern int check_dslited(int unit);
+extern int dslited_main(int argc, char **argv);
 #endif
 extern void start_rdisc6(void);
 extern void stop_rdisc6(void);
@@ -2511,6 +2555,7 @@ extern int prepare_cert_in_etc(void);
 #else
 static inline int prepare_cert_in_etc(void) { return 0; }
 #endif
+extern void restart_qos_if_bwlim_enabled(void);
 extern void handle_notifications(void);
 #ifdef RTL_WTDOG
 extern void stop_rtl_watchdog(void);
@@ -2540,6 +2585,13 @@ extern void set_hostname(void);
 extern int _start_telnetd(int force);
 extern int start_telnetd(void);
 extern void stop_telnetd(void);
+#if defined(RTCONFIG_IPV6)
+extern int start_telnetd6(void);
+extern void stop_telnetd6(void);
+#else
+static inline int start_telnetd6(void) { return 0; }
+static inline void stop_telnetd6(void);
+#endif
 #ifdef RTCONFIG_SSH
 extern int start_sshd(void);
 extern void stop_sshd(void);
@@ -2610,7 +2662,7 @@ extern int update_asus_ddns_token();
 extern int update_asus_ddns_token_main(int argc, char *argv[]);
 #endif
 extern void stop_ddns(void);
-extern int start_ddns(char *caller);
+extern int start_ddns(char *caller, int isAidisk);
 extern void refresh_ntpc(void);
 extern void start_hotplug2(void);
 extern void stop_hotplug2(void);
@@ -2659,6 +2711,7 @@ extern void stop_dsl_autodet(void);
 extern void stop_dsl_diag(void);
 extern int start_dsl_diag(void);
 #endif
+extern int getPid_fromFile(char *file_name);
 #ifdef RTCONFIG_FRS_LIVE_UPDATE
 extern int firmware_check_update_main(int argc, char *argv[]);
 #endif
@@ -2934,6 +2987,11 @@ extern int dump_powertable(void);
 #endif
 #ifdef RTCONFIG_TCPLUGIN
 extern void exec_tcplugin();
+#endif
+#ifdef RTCONFIG_GEARUPPLUGIN
+extern int exec_gu(int enable);
+extern void stop_gu_service(int status);
+extern void start_gu_service();
 #endif
 
 //speedtest.c
@@ -3497,6 +3555,9 @@ extern int asus_ctrl_get();
 extern int asus_ctrl_sku_get();
 extern int asus_ctrl_write(const char *asusctrl);
 extern int asus_ctrl_sku_write(const char *asusctrl_sku);
+extern int fco_set(const char *);
+extern int fco_get(void);
+extern void fco_test(void);
 #else
 static inline int asus_ctrl_write(char *asusctrl) { return 0; }
 static inline int asus_ctrl_sku_write(char *asusctrl_sku) { return 0; }
@@ -3504,7 +3565,7 @@ static inline int asus_ctrl_sku_write(char *asusctrl_sku) { return 0; }
 extern void asus_ctrl_sku_check();
 extern void asus_ctrl_sku_update();
 extern void fix_location_code(void);
-extern int asus_ctrl_nv(char *asusctrl);
+extern int asus_ctrl_nv(char *asusctrl, int do_rc);
 extern int asus_ctrl_nv_restore();
 extern int setting_SG_mode_wps();
 #endif
@@ -3586,6 +3647,7 @@ extern void run_wgs_fw_nat_scripts();
 extern void run_wgc_fw_nat_scripts();
 extern int is_wg_enabled();
 extern void check_wgc_endpoint();
+extern void reload_wgs_ip_rule();
 #ifdef RTCONFIG_MULTILAN_CFG
 extern void update_wgc_by_sdn(MTLAN_T *pmtl, size_t mtl_sz, int restart_all_sdn);
 extern void update_wgs_by_sdn(MTLAN_T *pmtl, size_t mtl_sz, int restart_all_sdn);
@@ -3668,4 +3730,13 @@ void wl_apply_akm_by_auth_mode(int unit, int subunit, char *sp_prefix_auth);
 #if defined(RTCONFIG_WISP)
 extern int get_wisp_status(void);
 #endif
+
+#if defined(RTCONFIG_MT798X)
+void record_NOP(void);
+void clear_NOP(void);
+int update_isp_img(const char *);
+int clear_isp_img(void);
+void try_isp_mount(void);
+#endif
 #endif	/* __RC_H__ */
+

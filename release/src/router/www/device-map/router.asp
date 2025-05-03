@@ -60,6 +60,8 @@ var assassinMode_enable = (function(){
 	return false;
 })();
 $(document).ready(function(){
+	const get_header_info = httpApi.hookGet("get_header_info");
+	window.parent.postMessage('router.asp', `${get_header_info.protocol}://${get_header_info.host}:${get_header_info.port}`);
 	if(system.INTELplatform || system.modelName == 'RT-AC87U'){
 		checkWLReady();
 	}
@@ -784,7 +786,7 @@ function genAuthMethod(unit, id, nmode_x, auth_mode_x){
 		}
     }
 	else if(auth_mode_x == 'open'){
-		if(document.getElementById('wl'+ unit +'_open_suggest')){
+		if(document.getElementById('wl'+ unit +'_open_suggest') && owe_trans_support){
 			document.getElementById('wl'+ unit +'_open_suggest').style.display = '';
 		}
 		
@@ -795,8 +797,13 @@ function genAuthMethod(unit, id, nmode_x, auth_mode_x){
 				getWEPKey(unit, 'wl'+ unit +'_wep_key', variable['wl'+ unit +'_key']);
 			}
 			else{
-				document.getElementById('wl'+ unit +'_wep_x').style.display = 'none';
-				document.getElementById('wl'+ unit +'k_keyey').style.display = 'none';				
+				if(document.getElementById('wl'+ unit +'_wep_x')){
+					document.getElementById('wl'+ unit +'_wep_x').style.display = 'none';
+				}
+				
+				if(document.getElementById('wl'+ unit +'k_keyey')){
+					document.getElementById('wl'+ unit +'k_keyey').style.display = 'none';
+				}	
 			}
 		}
 	}
@@ -1101,7 +1108,7 @@ function validateInput(){
 
 				jsonPara["current_ssid"] = ssid_array;
 				if(!validator.dwb_check_wl_setting(jsonPara)) {
-					alert("The fronthaul SSID is the same as the backhaul SSID.");/* untranslated */
+					alert(`<#wireless_JS_dup_SSID#>`);
 					obj.focus();
 					return false;
 				}

@@ -1994,8 +1994,10 @@ ej_wl_rate_2g(int eid, webs_t wp, int argc, char_t **argv)
 {
 	if(sw_mode() == SW_MODE_REPEATER)
 		return ej_wl_rate(eid, wp, argc, argv, 0);
+	else if(check_user_agent(user_agent) != FROM_BROWSER)
+		return websWrite(wp, "\"\"");
 	else
-	   	return 0;
+		return websWrite(wp, "");
 }
 
 int
@@ -2003,8 +2005,10 @@ ej_wl_rate_5g(int eid, webs_t wp, int argc, char_t **argv)
 {
 	if(sw_mode() == SW_MODE_REPEATER)
 		return ej_wl_rate(eid, wp, argc, argv, 1);
+	else if(check_user_agent(user_agent) != FROM_BROWSER)
+		return websWrite(wp, "\"\"");
 	else
-	   	return 0;
+		return websWrite(wp, "");
 }
 
 int
@@ -2012,8 +2016,10 @@ ej_wl_rate_5g_2(int eid, webs_t wp, int argc, char_t **argv)
 {
 	if(sw_mode() == SW_MODE_REPEATER)
 		return ej_wl_rate(eid, wp, argc, argv, 2);
+	else if(check_user_agent(user_agent) != FROM_BROWSER)
+		return websWrite(wp, "\"\"");
 	else
-		return 0;
+		return websWrite(wp, "");
 }
 
 int
@@ -2021,8 +2027,10 @@ ej_wl_rate_6g(int eid, webs_t wp, int argc, char_t **argv)
 {
 	if(sw_mode() == SW_MODE_REPEATER)
 		return ej_wl_rate(eid, wp, argc, argv, 3);
+	else if(check_user_agent(user_agent) != FROM_BROWSER)
+		return websWrite(wp, "\"\"");
 	else
-		return 0;
+		return websWrite(wp, "");
 }
 
 int

@@ -35,7 +35,7 @@
 #include <disk_initial.h>
 #include <limits.h>		//PATH_MAX, LONG_MIN, LONG_MAX
 
-#include<swrt.h>
+#include <swrt.h>
 
 char *usb_dev_file = "/proc/bus/usb/devices";
 
@@ -2775,6 +2775,11 @@ _dprintf("restart_nas_services(%d): test 6.\n", getpid());
 			}
 		}
 		file_unlock(lock);
+#ifdef RTCONFIG_FRS_FEEDBACK
+#ifdef RTCONFIG_DBLOG
+		start_dblog(0);
+#endif /* RTCONFIG_DBLOG */
+#endif /* RTCONFIG_FRS_FEEDBACK */
 	}
 #endif
 	else if (interface && strncmp(interface, "8/", 2) == 0) {	/* usb storage */

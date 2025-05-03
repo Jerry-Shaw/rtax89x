@@ -12,6 +12,8 @@
 <link rel="stylesheet" type="text/css" href="index_style.css"> 
 <link rel="stylesheet" type="text/css" href="form_style.css">
 <link rel="stylesheet" type="text/css" href="device-map/device-map.css">
+<script type="text/javascript" src="/js/jquery.js"></script>
+<script type="text/javascript" src="/js/httpApi.js"></script>
 <script language="JavaScript" type="text/javascript" src="/state.js"></script>
 <script type="text/javascript" language="JavaScript" src="/help.js"></script>
 <script language="JavaScript" type="text/javascript" src="/general.js"></script>
@@ -19,8 +21,6 @@
 <script language="JavaScript" type="text/javascript" src="/client_function.js"></script>
 <script language="JavaScript" type="text/javascript" src="/validator.js"></script>
 <script language="JavaScript" type="text/javascript" src="/form.js"></script>
-<script type="text/javascript" language="JavaScript" src="/js/jquery.js"></script>
-<script type="text/javascript" src="/js/httpApi.js"></script>
 <script type="text/javascript" src="/switcherplugin/jquery.iphone-switch.js"></script>
 <style type="text/css">
 .contentM_qis{
@@ -127,7 +127,7 @@ function initial(){
 		gen_vts_ruleTable_Block(key);
 	});
 
-	if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+	if((wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 		$(".setup_info_icon").show();
 		$(".setup_info_icon").click(
 			function() {				
@@ -565,7 +565,7 @@ function editProfile(_mode, _this) {
 			}
 			else{
 				$("#vts_port_x").parent().parent().find('th').html('<#IPConnection_VSList_External_Port#><div class="setup_info_icon" style="display:none;"></div>');
-				if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+				if((wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 					$(".setup_info_icon").show();
 					$(".setup_info_icon").click(
 						function() {
@@ -696,7 +696,7 @@ function saveProfile(_mode, _wanIdx, _rowIdx) {
 	else{
 		if(!check_multi_range(document.getElementById("vts_port_x"), 1, 65535, true))
 			return false;
-		if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+		if((wan_proto == "v6plus" || wan_proto == "ocnvc" || wan_proto == "v6opt") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			if (!check_multi_range_s46_ports(document.getElementById("vts_port_x"))){
 				if(!confirm(port_confirm)){
 					document.getElementById("vts_port_x").focus();

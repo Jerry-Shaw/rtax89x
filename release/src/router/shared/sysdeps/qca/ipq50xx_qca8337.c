@@ -415,9 +415,15 @@ int ipq50xx_qca8337_vlan_set(int vtype, char *upstream_if, int vid, int prio, un
 		eval("brctl", "addbr", brv_if);
 		eval("ifconfig", brv_if, "0.0.0.0", "up");
 
+#if 0
 		set_netdev_sysfs_param(brv_if, "bridge/multicast_querier", "1");
 		set_netdev_sysfs_param(brv_if, "bridge/multicast_snooping",
 			nvram_match("switch_br_no_snooping", "1")? "0" : "1");
+#else
+		/* should not handle the multicast on IPTV bridge */
+		set_netdev_sysfs_param(brv_if, "bridge/multicast_querier", "0");
+		set_netdev_sysfs_param(brv_if, "bridge/multicast_snooping", "0");
+#endif
 	}
 
 	if (vtype == VLAN_TYPE_WAN || vtype == VLAN_TYPE_LAN_NO_VLAN) {

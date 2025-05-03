@@ -121,6 +121,11 @@ var isWL_map = {
 		"text": "6G",
 		"type": "6g",
 		"idx": 1
+	},
+	"5" : {
+		"text": "6G",
+		"type": "6g",
+		"idx": 2
 	}
 };
 var _wl_band_count = (function(){
@@ -416,7 +421,7 @@ function getUploadIcon(clientMac) {
 				return false;
 			}
 			var match_data = mimeType_str.match(mimeTypeRegExp);
-			if(!Boolean(match_data)){
+			if(!match_data){
 				return false;
 			}
 			var base64_str = str_tmp_arr[1];
@@ -920,13 +925,15 @@ function popClientListEditTable(event) {
 		});
 
 		var setRadioControl = function (state, mode, mac) {
+			const manually_dhcp_maximum  = (isSupport("MaxRule_extend_limit") == 0) ? 64: isSupport("MaxRule_extend_limit");
+			const parentctrl_maximum = (isSupport("MaxRule_parentctrl") == 0) ? 16 : isSupport("MaxRule_parentctrl");
 			switch (mode) {
 				case "ipBinding" :
 					$('#edit_client_block #card_radio_IPBinding_enable').iphoneSwitch(state,
 						function(){
 							if(card_client_variable.manual_dhcp_list[mac] == undefined) {
-								if(manual_dhcp_list_num == 64) {
-									if(confirm("The max limit is 64 rule. Please check your client list on DHCP server.")) { /*untranslated*/
+								if(manual_dhcp_list_num >= manually_dhcp_maximum) {
+									if(confirm(stringSafeGet("<#Clientlist_IPMAC_Binding_max#>".replace("64", manually_dhcp_maximum)))) {
 										location.href = "/Advanced_DHCP_Content.asp" ;
 									}
 									else {
@@ -949,8 +956,8 @@ function popClientListEditTable(event) {
 					$('#edit_client_block #card_radio_BlockInternet_enable').iphoneSwitch(state,
 						function(){
 							if(card_client_variable.MULTIFILTER_MAC.search(mac) == -1) {
-								if(client_MULTIFILTER_num == 16) {
-									if(confirm("The max limit is 16 clients. Please check your client list on time scheduling.")) { /*untranslated*/
+								if(client_MULTIFILTER_num >= parentctrl_maximum) {
+									if(confirm(stringSafeGet("<#Clientlist_block_internet_max#>".replace("16", parentctrl_maximum)))) {
 										location.href = "/ParentalControl.asp" ;
 									}
 									else {
@@ -973,8 +980,8 @@ function popClientListEditTable(event) {
 					$('#edit_client_block #card_radio_TimeScheduling_enable').iphoneSwitch(state,
 						function(){
 							if(card_client_variable.MULTIFILTER_MAC.search(mac) == -1) {
-								if(client_MULTIFILTER_num == 16) {
-									if(confirm("The max limit is 16 clients. Please check your client list on time scheduling.")) { /*untranslated*/
+								if(client_MULTIFILTER_num >= parentctrl_maximum) {
+									if(confirm(stringSafeGet("<#Clientlist_block_internet_max#>".replace("16", parentctrl_maximum)))) {
 										location.href = "/ParentalControl.asp" ;
 									}
 									else {
@@ -1355,15 +1362,15 @@ function card_confirm(event) {
 				if(card_client_variable.timeSchedulingFlag || card_client_variable.blockInternetFlag) {
 					if(document.card_clientlist_form.MULTIFILTER_MAC.value == "") {
 						if(card_client_variable.timeSchedulingFlag)
-							document.card_clientlist_form.MULTIFILTER_ENABLE.value += "1";
+							document.card_clientlist_form.MULTIFILTER_ENABLE.value = "1";
 						else if(card_client_variable.blockInternetFlag)
-							document.card_clientlist_form.MULTIFILTER_ENABLE.value += "2";
-						document.card_clientlist_form.MULTIFILTER_MAC.value += clientMac;
-						document.card_clientlist_form.MULTIFILTER_DEVICENAME.value += clientName;
+							document.card_clientlist_form.MULTIFILTER_ENABLE.value = "2";
+						document.card_clientlist_form.MULTIFILTER_MAC.value = clientMac;
+						document.card_clientlist_form.MULTIFILTER_DEVICENAME.value = clientName;
 						if(isSupport("PC_SCHED_V3"))
-							document.card_clientlist_form.MULTIFILTER_MACFILTER_DAYTIME_V2.value += "W03E21000700<W04122000800";
+							document.card_clientlist_form.MULTIFILTER_MACFILTER_DAYTIME_V2.value = "W03E21000700<W04122000800";
 						else
-							document.card_clientlist_form.MULTIFILTER_MACFILTER_DAYTIME.value += "<";
+							document.card_clientlist_form.MULTIFILTER_MACFILTER_DAYTIME.value = "<";
 					}
 					else {
 						document.card_clientlist_form.MULTIFILTER_ENABLE.value += ">";
@@ -1652,7 +1659,7 @@ function showUploadIconsTable() {
 	}
 	code +='</table>';
 	document.getElementById("card_usericons_block").innerHTML = code;
-};
+}
 function delUploadIcon(rowdata) {
 	var delIdx = rowdata.parentNode.parentNode.rowIndex;
 	var delMac = rowdata.parentNode.parentNode.childNodes[1].innerHTML;
@@ -2185,8 +2192,8 @@ function exportClientListLog() {
 		for(var i = 0; i < array.length; i += 1) {
 			tempArray = [];
 			tempArray[0] = (array[i][0] == 1) ? "Allow Internet access" : "Block Internet access";
-			tempArray[1] = array[i][1].replace(",", "");
-			tempArray[2] = array[i][2];
+            tempArray[1] = `"${array[i][1].replace(",", "").replace(/[=@]/g, " ")}"`;
+            tempArray[2] = `"${array[i][2].replace(/[=@]/g, " ")}"`;
 			tempArray[3] = array[i][3];
 			tempArray[4] = ipStateExport[clientList[array[i][4]].ipMethod];
 			tempArray[5] = array[i][4];
@@ -2836,7 +2843,7 @@ function getFilePath(file) {
 		currentPath = "../" + file;
 	}
 	return currentPath
-};
+}
 
 function editClientName(index) {
 	document.getElementById("div_clientName_"+index).style.display = "none";

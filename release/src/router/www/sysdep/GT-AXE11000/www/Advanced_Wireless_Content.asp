@@ -426,8 +426,17 @@ function applyRule(){var postObj = new Object();
 			"wl0_auth_mode_x": document.form.band0_auth_mode_x.value,
 			"wl1_auth_mode_x": document.form.band1_auth_mode_x.value,
 			"wl2_auth_mode_x": document.form.band2_auth_mode_x.value,
-			"wl1_bw_160": band1_enable_bw_160,
-			"wl2_bw_160": band2_enable_bw_160
+			"wl1_bw_160": (function(){
+				if(based_modelid == 'ET8_V2'){
+					return '<% nvram_get("wl1_bw_160"); %>'
+				}
+				
+				return band1_enable_bw_160;
+			})(),
+			"wl2_bw_160": band2_enable_bw_160,
+			"wl0_closed": document.form.wl0_closed.value,
+			"wl1_closed": document.form.wl1_closed.value,
+			"wl2_closed": document.form.wl2_closed.value
 		}
 
 		if(document.form.band0_bw.value == '1'){
@@ -521,8 +530,15 @@ function applyRule(){var postObj = new Object();
 				"wl0_auth_mode_x": document.form.band01_auth_mode_x.value,
 				"wl1_auth_mode_x": document.form.band01_auth_mode_x.value,
 				"wl2_auth_mode_x": document.form.band2_auth_mode_x.value,
-				"wl1_bw_160": band1_enable_bw_160,
-				"wl2_bw_160": band2_enable_bw_160
+				"wl1_bw_160": (function(){
+					if(based_modelid == 'ET8_V2'){
+						return '<% nvram_get("wl1_bw_160"); %>'
+					}
+					
+					return band1_enable_bw_160;
+				})(),
+				"wl2_bw_160": band2_enable_bw_160,
+				"wl0_closed": document.form.wl256_closed.value
 			}
 
 			if(document.form.band0_bw.value == '1'){
@@ -586,8 +602,16 @@ function applyRule(){var postObj = new Object();
 				"wl0_auth_mode_x": document.form.band01_auth_mode_x.value,
 				"wl1_auth_mode_x": document.form.band01_auth_mode_x.value,
 				"wl2_auth_mode_x": document.form.band2_auth_mode_x.value,
-				"wl1_bw_160": band1_enable_bw_160,
-				"wl2_bw_160": band2_enable_bw_160
+				"wl1_bw_160": (function(){
+					if(based_modelid == 'ET8_V2'){
+						return '<% nvram_get("wl1_bw_160"); %>'
+					}
+					
+					return band1_enable_bw_160;
+				})(),
+				"wl2_bw_160": band2_enable_bw_160,
+				"wl0_closed": document.form.wl25_closed.value,				
+				"wl2_closed": document.form.wl2_closed.value				
 			}
 
 			if(document.form.band0_bw.value == '1'){
@@ -1032,7 +1056,7 @@ function validForm(){
 			ssid_array.push(httpApi.nvramGet(["wl2_ssid"]).wl2_ssid);
 		jsonPara["current_ssid"] = ssid_array;
 		if(!validator.dwb_check_wl_setting(jsonPara)) {
-			alert("The fronthaul SSID is the same as the backhaul SSID.");/* untranslated */
+			alert(`<#wireless_JS_dup_SSID#>`);
 			return false;
 		}
 	}
@@ -1617,7 +1641,14 @@ function he_frame_mode(obj) {
 	}
 }
 
-var band1_enable_bw_160 = '<% nvram_get("wl1_bw_160"); %>';
+var band1_enable_bw_160 = (function(){
+	if(based_modelid == 'ET8_V2'){
+		return '0'
+	}
+
+	return '<% nvram_get("wl1_bw_160"); %>';
+})();
+
 var band2_enable_bw_160 = '<% nvram_get("wl2_bw_160"); %>';
 function separateGenBWTable(unit){
 	var bws = new Array();
@@ -1688,7 +1719,14 @@ function separateGenBWTable(unit){
 }
 function separateEnable_160MHz(obj){
 	if(obj.id == 'band1_160'){
-		band1_enable_bw_160 = obj.checked ? '1' : '0';
+		band1_enable_bw_160 = (function(){
+			if(based_modelid == 'ET8_V2'){
+				return '0'
+			}
+
+			return obj.checked ? '1' : '0';
+		})()
+		
 		separateGenBWTable('1');
 	}
 	else if(obj.id == 'band2_160'){
@@ -1942,14 +1980,20 @@ function separateGenChannel(unit, channel, bandwidth){
 			if(document.getElementById('band2_psc6g_checkbox').checked){
 				if(band6gBW160_limit){
 					channel_5g_2 = ['37', '53', '69', '85', '101', '117', '133', '149', '165', '181', '197', '213'];
+					if(ttc.indexOf('CH') != -1){
+						channel_5g_2 = ['37', '53', '69', '85'];
+					}
 				}
 				else{
 					channel_5g_2 = ['5', '21', '37', '53', '69', '85', '101', '117', '133', '149', '165', '181', '197', '213', '229'];
+					if(ttc.indexOf('CH') != -1){
+						channel_5g_2 = ['5', '21', '37', '53', '69', '85'];
+					}
 				}
 				
 				if(is_EU_sku || ttc.indexOf('AU') != -1 || ttc.indexOf('AA') != -1){
 					channel_5g_2 = ['5', '21', '37', '53', '69', '85'];
-				}
+				}				
 			}
 
 			for(var i=channel_5g_2.length-1; i>=0; i--){
@@ -3325,13 +3369,22 @@ function channel_6g(bw){
 	if(document.getElementById('band2_psc6g_checkbox').checked){
 		if(band6gBW160_limit){
 			wl_channel_list_5g_2 = ['37', '53', '69', '85', '101', '117', '133', '149', '165', '181', '197', '213'];
+			if(ttc.indexOf('AU') != -1 || ttc.indexOf('CH') != -1){
+				wl_channel_list_5g_2 = ['37', '53', '69', '85'];
+			}
 		}
 		else{
 			wl_channel_list_5g_2 = ['5', '21', '37', '53', '69', '85', '101', '117', '133', '149', '165', '181', '197', '213', '229'];
+			if(ttc.indexOf('AU') != -1 || ttc.indexOf('CH') != -1){
+				wl_channel_list_5g_2 = ['5', '21', '37', '53', '69', '85'];
+			}
 		}		
 		
 		if(is_EU_sku || ttc.indexOf('AU') != -1 || ttc.indexOf('AA') != -1){
 			wl_channel_list_5g_2 = ['5', '21', '37', '53', '69', '85', '101', '117', '133', '149', '165', '181', '197', '213'];
+		}
+		else if(ttc.indexOf('CH') != -1){
+			wl_channel_list_5g_2 = ['5', '21', '37', '53', '69', '85'];
 		}
 	}
 	else{
@@ -3369,16 +3422,18 @@ function channel_6g(bw){
 				// 	}
 				// }
 
-				if((wl2.channel_320m.indexOf("6g" + _cur_channel + "/320-1") != -1) || (wl2.channel_320m.indexOf("6g" + _cur_channel + "/320-2") != -1)){
-					if(wl2.channel_320m.indexOf("6g" + _cur_channel + "/320-1") != -1){
-						_wl_channel.push("6g" + _cur_channel + "/320-1");
-					}
+				if(wifi7_support){				
+					if((wl2.channel_320m.indexOf("6g" + _cur_channel + "/320-1") != -1) || (wl2.channel_320m.indexOf("6g" + _cur_channel + "/320-2") != -1)){
+						if(wl2.channel_320m.indexOf("6g" + _cur_channel + "/320-1") != -1){
+							_wl_channel.push("6g" + _cur_channel + "/320-1");
+						}
 
-					if(wl2.channel_320m.indexOf("6g" + _cur_channel + "/320-2") != -1){
-						_wl_channel.push("6g" + _cur_channel + "/320-2");
-					}
+						if(wl2.channel_320m.indexOf("6g" + _cur_channel + "/320-2") != -1){
+							_wl_channel.push("6g" + _cur_channel + "/320-2");
+						}
 
-					continue loop_auto;
+						continue loop_auto;
+					}
 				}
 			}
 

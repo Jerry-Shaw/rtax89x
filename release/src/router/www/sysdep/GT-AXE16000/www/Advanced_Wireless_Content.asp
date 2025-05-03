@@ -1433,7 +1433,7 @@ function validForm(){
 			ssid_array.push(httpApi.nvramGet(["wl2_ssid"]).wl2_ssid);
 		jsonPara["current_ssid"] = ssid_array;
 		if(!validator.dwb_check_wl_setting(jsonPara)) {
-			alert("The fronthaul SSID is the same as the backhaul SSID.");/* untranslated */
+			alert(`<#wireless_JS_dup_SSID#>`);
 			return false;
 		}
 	}
@@ -2018,7 +2018,14 @@ function he_frame_mode(obj) {
 	}
 }
 
-var band1_enable_bw_160 = '<% nvram_get("wl0_bw_160"); %>';
+var band1_enable_bw_160 = (function(){
+	if(based_modelid == 'ET8_V2'){
+		return '0';
+	}
+	return '<% nvram_get("wl0_bw_160"); %>';
+
+})();
+
 var band2_enable_bw_160 = '<% nvram_get("wl1_bw_160"); %>';
 var band3_enable_bw_160 = '<% nvram_get("wl2_bw_160"); %>';
 function separateGenBWTable(unit){
@@ -2090,7 +2097,14 @@ function separateGenBWTable(unit){
 }
 function separateEnable_160MHz(obj){
 	if(obj.id == 'band1_160'){
-		band1_enable_bw_160 = obj.checked ? '1' : '0';
+		band1_enable_bw_160 = (function(){
+			if(based_modelid == 'ET8_V2'){
+				band1_enable_bw_160 = '0'
+			}
+
+			return  obj.checked ? '1' : '0';
+		})()
+		
 		separateGenBWTable('1');
 	}
 	else if(obj.id == 'band2_160'){
@@ -2510,6 +2524,9 @@ function separateGenChannel(unit, channel, bandwidth){
 			if(document.getElementById('band3_psc6g_checkbox').checked){
 				channel_6g = ['5', '21', '37', '53', '69', '85', '101', '117', '133', '149', '165', '181', '197', '213', '229'];
 				if(is_EU_sku || ttc.indexOf('AU') != -1 || ttc.indexOf('AA') != -1){
+					channel_6g = ['5', '21', '37', '53', '69', '85'];
+				}
+				else if(ttc.indexOf('CH') != -1){
 					channel_6g = ['5', '21', '37', '53', '69', '85'];
 				}
 			}
@@ -4084,6 +4101,9 @@ function channel_6g(bw){
 	if(document.getElementById('band3_psc6g_checkbox').checked){
 		wl_channel_list_6g = ['5', '21', '37', '53', '69', '85', '101', '117', '133', '149', '165', '181', '197', '213', '229'];
 		if(is_EU_sku || ttc.indexOf('AU') != -1 || ttc.indexOf('AA') != -1){
+			wl_channel_list_6g = ['5', '21', '37', '53', '69', '85'];
+		}
+		else if(ttc.indexOf('CH') != -1){
 			wl_channel_list_6g = ['5', '21', '37', '53', '69', '85'];
 		}
 	}

@@ -755,6 +755,9 @@ obj-y += $(if $(RTCONFIG_ATED122),ated_1.2.2,$(if $(ATEVER), ated_$(ATEVER), ate
 endif
 endif
 obj-y += $(if $(RTCONFIG_MII_MGR),mii_mgr)
+ifeq ($(RTCONFIG_MT798X),y)
+obj-y += cramfs-tools
+endif
 
 ifeq ($(or $(RTAC1200V2),$(RTACRH18),$(RT4GAC86U),$(RTAX53U),$(RTAX54),$(RT4GAX56),$(if $(filter $(BUILD_NAME),XD4S),y,)),y)
 obj-y += regs
@@ -976,7 +979,13 @@ obj-$(RTCONFIG_AHS) += curl
 obj-$(RTCONFIG_AHS) += json-c
 obj-$(RTCONFIG_AHS) += ahs
 
-obj-$(RTCONFIG_ASD) += asd
+ifeq ($(RTCONFIG_ASD_2_1),y)
+obj-y += asd2.1
+obj-y += onig-6.9.9
+obj-y += jq-1.7.1
+else ifeq ($(RTCONFIG_ASD),y)
+obj-y += asd
+endif
 
 obj-$(RTCONFIG_OPENVPN) += openssl
 obj-$(RTCONFIG_OPENVPN) += libvpn
@@ -1430,8 +1439,8 @@ endif
 
 #For timemachine
 obj-$(RTCONFIG_TIMEMACHINE) += openssl
-obj-$(RTCONFIG_TIMEMACHINE) += libgpg-error-1.10
-obj-$(RTCONFIG_TIMEMACHINE) += libgcrypt-1.5.1
+obj-$(RTCONFIG_TIMEMACHINE) += libgpg-error-1.47
+obj-$(RTCONFIG_TIMEMACHINE) += libgcrypt-1.10.2
 obj-$(RTCONFIG_TIMEMACHINE) += db-4.8.30
 obj-$(RTCONFIG_TIMEMACHINE) += libevent-2.0.21
 obj-$(RTCONFIG_TIMEMACHINE) += netatalk-3.0.5
@@ -1628,6 +1637,7 @@ endif
 
 obj-$(RTCONFIG_TCPDUMP) += libpcap
 obj-$(RTCONFIG_TCPDUMP) += tcpdump-4.4.0
+obj-$(RTCONFIG_TCPREPLAY) += libpcap-1.9.1 tcpreplay
 obj-$(RTCONFIG_DUMP4000) += libpcap
 obj-$(RTCONFIG_DUMP4000) += tcpdump-4.4.0
 obj-$(RTCONFIG_TRACEROUTE) += traceroute-2.1.0
@@ -2535,7 +2545,11 @@ else ifeq ($(MUSL_LIBC),y)
 ifeq ($(RTCONFIG_MT798X),y)
 	$(STRIP) $(TARGETDIR)/lib/libgcc_s.so.1
 	$(STRIP) $(TARGETDIR)/lib/libc.so
+ifeq ($(MUSL64),y)
 	cd $(TARGETDIR)/lib/ && ln -sf libc.so ld-musl-aarch64.so.1
+else
+	cd $(TARGETDIR)/lib/ && ln -sf libc.so ld-musl-arm.so.1
+endif
 	cd $(TARGETDIR)/lib/ && ln -sf libgcc_s.so.1 libgcc_s.so
 else ifeq ($(or $(RTAX53U),$(RTAX54),$(RT4GAX56),$(if $(filter $(BUILD_NAME),XD4S),y,)),y)
 	@cd $(TARGETDIR)/lib/ && ln -sf libc.so ld-musl-mipsel-sf.so.1
@@ -2549,7 +2563,7 @@ endif
 ifeq ($(or $(RTAX53U),$(RTAX54),$(RT4GAX56),$(if $(filter $(BUILD_NAME),XD4S),y,)),y)
 	@cp $(SRCBASE)/linux/vendors/Mediatek/MT7621/MT7915/* $(TARGETDIR)/rom/etc/wireless/mediatek/
 else ifeq ($(RTCONFIG_MT798X),y)
-	# TBD.
+	-@mkdir $(TARGETDIR)/isp
 else
 	@cp $(SRCBASE)/linux/vendors/Mediatek/MT7629/* $(TARGETDIR)/rom/etc/wireless/mediatek/
 endif
@@ -3515,10 +3529,10 @@ ifeq ($(HND_ROUTER),y)
 endif
 	install -D -m 0700 httpd/gencert.sh $(INSTALLDIR)$(INSTALLSUBDIR)/usr/sbin/gencert.sh
 ifeq ($(RTCONFIG_ECC256),y)
-	cat httpd/gencert.sh | sed -e "s,^ECC256=0,ECC256=1," > $(INSTALLDIR)$(INSTALLSUBDIR)/usr/sbin/gencert.sh
-	chmod 0700 $(INSTALLDIR)$(INSTALLSUBDIR)/usr/sbin/gencert.sh
-else
+	sed -i -e "s,^ECC256=0,ECC256=1," $(INSTALLDIR)$(INSTALLSUBDIR)/usr/sbin/gencert.sh
 endif
+	sed -i -e "s,^[ 	]*#[^!]*$$,," $(INSTALLDIR)$(INSTALLSUBDIR)/usr/sbin/gencert.sh
+	sed -i '/^$$/d' $(INSTALLDIR)$(INSTALLSUBDIR)/usr/sbin/gencert.sh
 endif
 
 openssl-stage:
@@ -3532,6 +3546,7 @@ openssl-1.1/Makefile:
 	-ffunction-sections -fdata-sections -Wl,--gc-sections \
 	shared $(OPENSSL_CIPHERS) no-async --api=1.0.0 \
 	    no-aria no-sm2 no-sm3 no-sm4 \
+	    --with-rand-seed=devrandom \
 	    $(if $(filter y,$(RTCONFIG_WTFAST)),-DRTCONFIG_WTFAST,) \
 	    $(if $(filter y,$(HND_ROUTER)),,-DOPENSSL_PREFER_CHACHA_OVER_GCM)
 	@$(MAKE) -C openssl-1.1 depend
@@ -4750,7 +4765,7 @@ ndisc6-install: ndisc6
 	$(STRIP) $(INSTALLDIR)/ndisc6/usr/sbin/ndisc6
 ifneq ($(RTCONFIG_BCMWL6),y)
 ifneq ($(or $(MUSL32),$(MUSL64),$(MUSL_LIBC)),y)
-	install -D $(shell dirname $(shell which $(CXX)))/../lib/librt.so.0 $(TARGETDIR)/lib/librt.so.0
+	$(if $(wildcard $(shell dirname $(shell which $(CXX)))/../lib/librt.so.0),install -D $(shell dirname $(shell which $(CXX)))/../lib/librt.so.0 $(TARGETDIR)/lib/librt.so.0)
 endif
 endif
 
@@ -5470,13 +5485,14 @@ mosquitto-1.6.8-clean:
 	[ ! -f mosquitto-1.6.8/Makefile ] || $(MAKE) -C mosquitto-1.6.8 clean
 	@rm -f mosquitto-1.6.8/stamp-h1
 	
-libpcap-1.9.1/stamp-h1:
-	cd libpcap-1.9.1 && $(CONFIGURE) --with-pcap=linux --enable-shared
+libpcap-1.9.1/Makefile:
+	cd libpcap-1.9.1 && \
+		$(CONFIGURE) --prefix=/usr --with-pcap=linux --enable-shared
 	touch $@
 
-libpcap-1.9.1: libpcap-1.9.1/stamp-h1
+libpcap-1.9.1: libpcap-1.9.1/Makefile
 	@$(SEP)
-	@$(MAKE) -C libpcap-1.9.1 CC=$(CC) AR=$(AR) RANLIB=$(RANLIB)
+	@$(MAKE) -C libpcap-1.9.1 CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) && $(MAKE) $@-stage
 
 libpcap-1.9.1-install: libpcap-1.9.1
 	@echo "do nothing"
@@ -5487,7 +5503,7 @@ libpcap-1.9.1-install: libpcap-1.9.1
 libpcap-1.9.1-clean:
 	[ ! -f libpcap-1.9.1/Makefile ] || $(MAKE) -C libpcap-1.9.1 clean
 	@rm -f libpcap-1.9.1/stamp-h1
-		
+
 openvswitch-2.12.0/stamp-h1:
 	cd openvswitch-2.12.0 && ./boot.sh && $(CONFIGURE) --prefix='' --host=arm-linux \
 		--enable-shared --disable-libcapng --with-openssl=$(TOP)/openssl CFLAGS="-O2 -std=gnu99" \
@@ -5629,7 +5645,7 @@ opensync-1.4.0-clean:
 	@rm -f opensync-1.4.0/stamp-h1
 
 libev-4.33/stamp-h1:
-	cd libev-4.33 && $(CONFIGURE) --prefix='' --host=arm-linux
+	cd libev-4.33 && $(CONFIGURE) --prefix='' $(if $(or $(RTCONFIG_QCA),$(RTCONFIG_RALINK)),,--host=arm-linux)
 	touch $@
 
 libev-4.33: libev-4.33/stamp-h1
@@ -5639,7 +5655,7 @@ libev-4.33: libev-4.33/stamp-h1
 libev-4.33-install: libev-4.33
 	@$(SEP)
 	install -D libev-4.33/.libs/libev.so.4.0.0 $(INSTALLDIR)/$</usr/lib/libev.so.4.0.0
-	$(STRIP) $(INSTALLDIR)/$</usr/lib/libev.so.4.0.0
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) $(INSTALLDIR)/$</usr/lib/libev.so.4.0.0)
 	cd $(INSTALLDIR)/$</usr/lib && ln -sf libev.so.4.0.0 libev.so.4
 
 libev-4.33-clean:
@@ -5714,14 +5730,17 @@ pstree-clean:
 libcodb/stamp-h1:
 	touch $@
 
-libcodb: libcodb/stamp-h1 sqlite3
+libcodb: libcodb/stamp-h1 sqlite sqlite3
 	@$(SEP)
-	@$(MAKE) -C libcodb CC=$(CC)
+	@$(MAKE) -C libcodb CC=$(CC) && $(MAKE) -C libcodb stage
 
 libcodb-install: libcodb
 	@echo INSTALLDIR=$(INSTALLDIR)
 	install -D libcodb/libcodb.so $(INSTALLDIR)/$</usr/lib/libcodb.so
-	$(STRIP) $(INSTALLDIR)/$</usr/lib/libcodb.so
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) $(INSTALLDIR)/$</usr/lib/libcodb.so)
+
+libcodb-stage: libcodb
+	$(MAKE) -C libcodb stage
 
 libcodb-clean:
 	@$(SEP)
@@ -5734,7 +5753,7 @@ libpcap/stamp-h1:
 
 libpcap: libpcap/Makefile
 	@$(SEP)
-	@$(MAKE) -C $@
+	@$(MAKE) -C $@ && $(MAKE) $@-stage
 
 libpcap-install:
 	# do nothing
@@ -5833,9 +5852,9 @@ lldpd-0.9.8-install: lldpd-0.9.8
 	install -D lldpd-0.9.8/src/client/.libs/lldpcli $(INSTALLDIR)/lldpd-0.9.8/usr/sbin/lldpcli
 	install -D lldpd-0.9.8/src/daemon/lldpd $(INSTALLDIR)/lldpd-0.9.8/usr/sbin/lldpd
 	install -D lldpd-0.9.8/src/lib/.libs/liblldpctl.so.4.8.0 $(INSTALLDIR)/lldpd-0.9.8/usr/lib/liblldpctl.so.4.8.0
-	$(STRIP) $(INSTALLDIR)/lldpd-0.9.8/usr/sbin/lldpcli
-	$(STRIP) $(INSTALLDIR)/lldpd-0.9.8/usr/sbin/lldpd
-	$(STRIP) $(INSTALLDIR)/lldpd-0.9.8/usr/lib/liblldpctl.so.4.8.0
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) $(INSTALLDIR)/lldpd-0.9.8/usr/sbin/lldpcli)
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) $(INSTALLDIR)/lldpd-0.9.8/usr/sbin/lldpd)
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) $(INSTALLDIR)/lldpd-0.9.8/usr/lib/liblldpctl.so.4.8.0)
 	cd $(INSTALLDIR)/lldpd-0.9.8/usr/lib && ln -sf liblldpctl.so.4.8.0 liblldpctl.so && ln -sf liblldpctl.so.4.8.0 liblldpctl.so.4
 
 lldpd-0.9.8-clean:
@@ -6096,7 +6115,7 @@ endif
 
 sqlite/Makefile:
 	cd sqlite && autoreconf -i -f && \
-	CC=$(CC) CFLAGS="-Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
+	CC=$(CC) CFLAGS="$(if $(RTCONFIG_DEBUG),-g -Wall,-Os) $(EXTRACFLAGS) -ffunction-sections -fdata-sections -fPIC" \
 		LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections -lpthread -ldl" \
 		$(CONFIGURE) --prefix=/usr --enable-shared --enable-static \
 		--disable-readline --disable-dynamic-extensions --enable-threadsafe \
@@ -6113,10 +6132,10 @@ sqlite-clean:
 sqlite-install: sqlite
 	@$(SEP)
 	install -D sqlite/.libs/libsqlite3.so.0.8.6 $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) $(INSTALLDIR)/sqlite/usr/lib/libsqlite3.so.0.8.6)
 	cd $(INSTALLDIR)/sqlite/usr/lib && ln -sf libsqlite3.so.0.8.6 libsqlite3.so.0 && ln -sf libsqlite3.so.0.8.6 libsqlite3.so
 	install -D sqlite/sqlite3 $(INSTALLDIR)/sqlite/usr/sbin/sqlite3
-	$(STRIP) $(INSTALLDIR)/sqlite/usr/sbin/sqlite3
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) $(INSTALLDIR)/sqlite/usr/sbin/sqlite3)
 
 # sqlite encrpted version
 sqlCipher/stamp-h1:
@@ -7238,7 +7257,6 @@ lighttpd-1.4.39-install:
 			install -D lighttpd-1.4.39/prebuild/*.so $(INSTALLDIR)/lighttpd-1.4.39/usr/lib/ ; \
 		fi ; \
 		install -D samba-3.5.8/source3/bin/libsmbclient.so.0 $(INSTALLDIR)/lighttpd-1.4.39/usr/lib/libsmbclient.so.0 ; \
-		install -D libexif/libexif/.libs/libexif.so.12 $(INSTALLDIR)/lighttpd-1.4.39/usr/lib/libexif.so.12 ; \
 		mkdir -p $(INSTALLDIR)/lighttpd-1.4.39/usr/lighttpd/css && mkdir -p $(INSTALLDIR)/lighttpd-1.4.39/usr/lighttpd/js ; \
 		cp -rf lighttpd-1.4.39/external_file/css/ $(INSTALLDIR)/lighttpd-1.4.39/usr/lighttpd ; \
 		cp -rf lighttpd-1.4.39/external_file/js/ $(INSTALLDIR)/lighttpd-1.4.39/usr/lighttpd ; \
@@ -7582,13 +7600,13 @@ libssh2-1.10.0/Makefile:
 	cd libssh2-1.10.0 && autoreconf -fi && $(CONFIGURE) --prefix=/usr CC=$(CC) CXX=$(CXX) AR=$(AR) RANLIB=$(RANLIB) --enable-shared --enable-static \
 	$(if $(RTCONFIG_OPENSSL11)$(RTCONFIG_OPENSSL10),--with-libssl-prefix=$(STAGEDIR)/usr,--without-openssl) \
 	--with-libz-prefix=$(STAGEDIR)/usr \
-	--with-libgcrypt-prefix=$(TOP)/libgcrypt-1.5.1 \
+	--with-libgcrypt-prefix=$(TOP)/libgcrypt-1.10.2 \
 	--disable-examples-build \
-	CFLAGS="-O2 -Wall -ffunction-sections -fdata-sections -fPIC -I$(STAGEDIR)/usr/include -I$(TOP)/libgcrypt-1.5.1/src -I$(SRCBASE)/router/openssl/include" \
-	LDFLAGS="-ldl -Wl,-rpath=$(STAGEDIR)/usr/lib,--gc-sections $(LDFLAGS) -L$(STAGEDIR)/usr/lib -lz -L$(SRCBASE)/router/openssl -lcrypto -L$(TOP)/libgcrypt-1.5.1/src/.libs" && \
+	CFLAGS="-O2 -Wall -ffunction-sections -fdata-sections -fPIC -I$(STAGEDIR)/usr/include -I$(TOP)/libgcrypt-1.10.2/src -I$(SRCBASE)/router/openssl/include" \
+	LDFLAGS="-ldl -Wl,-rpath=$(STAGEDIR)/usr/lib,--gc-sections $(LDFLAGS) -L$(STAGEDIR)/usr/lib -lz -L$(SRCBASE)/router/openssl -lcrypto -L$(TOP)/libgcrypt-1.10.2/src/.libs" && \
 	LIBS="-lcrypto (if $(RTCONFIG_OPENSSL11),-lpthread,) -fPIC" 
 
-libssh2: libgcrypt-1.5.1 zlib libssh2-1.10.0/Makefile
+libssh2: libgcrypt-1.10.2 zlib libssh2-1.10.0/Makefile
 	@$(SEP)
 	$(MAKE) -j 8 -C libssh2-1.10.0 && $(MAKE) $@-stage
 
@@ -7629,7 +7647,7 @@ curl/Makefile: curl/configure
 		CFLAGS="$(if $(RTCONFIG_DEBUG),-g,-Os) -Wall -ffunction-sections -fdata-sections" \
 		CPPFLAGS="-I$(STAGEDIR)/usr/include" \
 		LDFLAGS="-Wl$(if $(RTCONFIG_TR069),$(comma)-rpath=$(STAGEDIR)/usr/lib,),--gc-sections $(LDFLAGS) -L$(STAGEDIR)/usr/lib" \
-		LIBS="-ldl $(if $(RTCONFIG_OPENSSL11),-lpthread,) \
+		LIBS="-ldl $(if $(RTCONFIG_OPENSSL11),-lssl -lcrypto -lpthread,) $(if $(RTCONFIG_TR069),-lssh2 -lz) \
 			   $(if $(RTCONFIG_MBEDTLS),-lmbedcrypto -lmbedx509 -lmbedtls,) \
 			   $(if $(RTCONFIG_WOLFSSL),-lwolfssl,)"
 
@@ -7751,44 +7769,45 @@ rtl_bin:
 rtl_bin-install:
 	@$(SEP)
 
-#libgpg-error-1.10
-libgpg-error-1.10/stamp-h1:
-	cd $(TOP)/libgpg-error-1.10 && \
+#libgpg-error-1.47
+libgpg-error-1.47/stamp-h1:
+	cd $(TOP)/libgpg-error-1.47 && \
 	$(CONFIGURE) --prefix=/usr
 	touch $@
 
-libgpg-error-1.10: libgpg-error-1.10/stamp-h1
+libgpg-error-1.47: libgpg-error-1.47/stamp-h1
 	@$(SEP)
-	$(MAKE) -C libgpg-error-1.10
+	$(MAKE) -C libgpg-error-1.47
 
-libgpg-error-1.10-install: libgpg-error-1.10
-	install -D libgpg-error-1.10/src/.libs/libgpg-error.so.0.8.0 $(INSTALLDIR)/libgpg-error-1.10/usr/lib/libgpg-error.so.0.8.0
-	$(STRIP) $(INSTALLDIR)/libgpg-error-1.10/usr/lib/libgpg-error.so.0.8.0
-	cd $(INSTALLDIR)/libgpg-error-1.10/usr/lib && ln -sf libgpg-error.so.0.8.0 libgpg-error.so.0
+libgpg-error-1.47-install: libgpg-error-1.47
+	install -D libgpg-error-1.47/src/.libs/libgpg-error.so.0.34.0 $(INSTALLDIR)/libgpg-error-1.47/usr/lib/libgpg-error.so.0.34.0
+	$(STRIP) $(INSTALLDIR)/libgpg-error-1.47/usr/lib/libgpg-error.so.0.34.0
+	cd $(INSTALLDIR)/libgpg-error-1.47/usr/lib && ln -sf libgpg-error.so.0.34.0 libgpg-error.so.0
 
-libgpg-error-1.10-clean:
-	-@$(MAKE) -C libgpg-error-1.10 clean
-	@rm -f libgpg-error-1.10/stamp-h1
+libgpg-error-1.47-clean:
+	-@$(MAKE) -C libgpg-error-1.47 clean
+	@rm -f libgpg-error-1.47/stamp-h1
 
-#libgcrypt-1.5.1
-libgcrypt-1.5.1/stamp-h1: libgpg-error-1.10
-	cd $(TOP)/libgcrypt-1.5.1 && \
-	$(CONFIGURE) --prefix=/usr --with-gpg-error-prefix=$(TOP)/libgpg-error-1.10/src \
-	LDFLAGS="-L$(TOP)/libgpg-error-1.10/src/.libs"
+#libgcrypt-1.10.2
+libgcrypt-1.10.2/stamp-h1: libgpg-error-1.47
+	cd $(TOP)/libgcrypt-1.10.2 && \
+	$(CONFIGURE) --prefix=/usr --with-gpg-error-prefix=$(TOP)/libgpg-error-1.47/src \
+	LDFLAGS="-L$(TOP)/libgpg-error-1.47/src/.libs -lgpg-error $(if $(QCA),$(EXTRALDFLAGS))" \
+	CFLAGS="-O0 -Wall -I$(TOP)/libgpg-error-1.47/src $(if $(QCA),$(EXTRACFLAGS))"
 	touch $@
 
-libgcrypt-1.5.1: libgcrypt-1.5.1/stamp-h1
+libgcrypt-1.10.2: libgcrypt-1.10.2/stamp-h1
 	@$(SEP)
-	@$(MAKE) -C libgcrypt-1.5.1
+	@$(MAKE) -C libgcrypt-1.10.2
 
-libgcrypt-1.5.1-install: libgcrypt-1.5.1
-	install -D libgcrypt-1.5.1/src/.libs/libgcrypt.so.11.8.0 $(INSTALLDIR)/libgcrypt-1.5.1/usr/lib/libgcrypt.so.11.8.0
-	$(STRIP) $(INSTALLDIR)/libgcrypt-1.5.1/usr/lib/libgcrypt.so.11.8.0
-	cd $(INSTALLDIR)/libgcrypt-1.5.1/usr/lib && ln -sf libgcrypt.so.11.8.0 libgcrypt.so.11
+libgcrypt-1.10.2-install: libgcrypt-1.10.2
+	install -D libgcrypt-1.10.2/src/.libs/libgcrypt.so.20.4.2 $(INSTALLDIR)/libgcrypt-1.10.2/usr/lib/libgcrypt.so.20.4.2
+	$(STRIP) $(INSTALLDIR)/libgcrypt-1.10.2/usr/lib/libgcrypt.so.20.4.2
+	cd $(INSTALLDIR)/libgcrypt-1.10.2/usr/lib && ln -sf libgcrypt.so.20.4.2 libgcrypt.so.20
 
-libgcrypt-1.5.1-clean:
-	-@$(MAKE) -C libgcrypt-1.5.1 clean
-	@rm -f libgcrypt-1.5.1/stamp-h1
+libgcrypt-1.10.2-clean:
+	-@$(MAKE) -C libgcrypt-1.10.2 clean
+	@rm -f libgcrypt-1.10.2/stamp-h1
 
 #db-4.8.30
 db-4.8.30/build_unix/stamp-h1:
@@ -7844,16 +7863,16 @@ netaconfig netatalk-3.0.5/stamp-h1:
 		$(MAKE) netatalk-3.0.5-dep ; \
 		touch $(TOP)/netatalk-3.0.5/* ; \
 		cd $(TOP)/netatalk-3.0.5 && \
-		CC=$(CC) CFLAGS="-Os -Wall -ffunction-sections -fdata-sections -I$(TOP)/db-4.8.30/build_unix -I$(TOP)/libgcrypt-1.5.1/src" \
-		LDFLAGS="-L$(TOP)/db-4.8.30/build_unix/.libs -L$(TOP)/libgcrypt-1.5.1/src/.libs -L$(TOP)/libgpg-error-1.10/src/.libs -L$(TOP)/libevent-2.0.21/.libs -lgpg-error -lgcrypt -lcrypt" \
+		CC=$(CC) CFLAGS="-Os -Wall -ffunction-sections -fdata-sections -I$(TOP)/db-4.8.30/build_unix -I$(TOP)/libgcrypt-1.10.2/src -I$(TOP)/libgpg-error-1.47/src $(if $(HND_ROUTER_BE_4916),-fcommon)"  \
+		LDFLAGS="-L$(TOP)/db-4.8.30/build_unix/.libs -L$(TOP)/libgcrypt-1.10.2/src/.libs -L$(TOP)/libgpg-error-1.47/src/.libs -L$(TOP)/libevent-2.0.21/.libs -lgpg-error -lgcrypt -lcrypt" \
 		$(CONFIGURE) \
-		ac_cv_path_LIBGCRYPT_CONFIG=$(TOP)/libgcrypt-1.5.1/src/libgcrypt-config \
+		ac_cv_path_LIBGCRYPT_CONFIG=$(TOP)/libgcrypt-1.10.2/src/libgcrypt-config \
 		--without-kerberos \
 		--with-bdb=$(TOP)/db-4.8.30/build_unix \
 		--prefix=/usr \
 		--with-dtrace=no \
 		--with-ssl-dir=$(TOP)/openssl \
-		--with-libgcrypt-dir=$(TOP)/libgcrypt-1.5.1 \
+		--with-libgcrypt-dir=$(TOP)/libgcrypt-1.10.2 \
 		$(if $(RTCONFIG_HND_ROUTER),,--with-ld-library-path=$(SRCBASE)/toolchains/hndtools-arm-linux-2.6.36-uclibc-4.5.3/lib) \
 		--with-libevent=no \
 		--with-libevent-header=$(TOP)/libevent-2.0.21/include ;\
@@ -8953,7 +8972,54 @@ asd-install:
 asd-clean:
 	$(MAKE) -C asd clean
 
+asd2.1: shared $(if $(BCM_502L07P2),ethctl_lib) nvram$(BCMEX)$(EX7) curl openssl libasc
+	$(MAKE) -C $@
 
+asd2.1-install:
+	install -D asd2.1/asd $(INSTALLDIR)/asd2.1/usr/bin/asd
+	install -D asd2.1/libasd.so $(INSTALLDIR)/asd2.1/usr/lib/libasd.so
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) $(INSTALLDIR)/asd2.1/usr/bin/asd)
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) $(INSTALLDIR)/asd2.1/usr/lib/libasd.so)
+
+asd2.1-clean:
+	$(MAKE) -C asd2.1 clean
+
+onig-6.9.9:
+	cd onig-6.9.9 && \
+	autoreconf -i -f && \
+	./configure  --host=arm-linux LD=$(CROSS_COMPILE)ld --prefix=/usr --exec-prefix=/usr --bindir=/usr/bin --sbindir=/usr/sbin --libexecdir=/usr/lib && \
+	make
+
+onig-6.9.9-install:
+	install -D onig-6.9.9/src/.libs/libonig.so.5.4.0 $(INSTALLDIR)/usr/lib/libonig.so.5.4.0
+	$(STRIP) $(INSTALLDIR)/usr/lib/libonig.so.5.4.0
+	cd $(INSTALLDIR)/usr/lib && \
+		ln -sf libonig.so.5.4.0 libonig.so.5 && \
+		ln -sf libonig.so.5.4.0 libonig.so.4 && \
+		ln -sf libonig.so.5.4.0 libonig.so
+
+onig-6.9.9-clean:
+	cd onig-6.9.9 && \
+	make distclean
+
+jq-1.7.1:
+	cd jq-1.7.1 && \
+	autoreconf -i &&\
+	./configure --host=arm-linux --with-oniguruma=$(SRCBASE)/router/onig-6.9.9/src LD=$(CROSS_COMPILE)ld --prefix=/usr && \
+	make
+
+jq-1.7.1-install:
+	install -D  jq-1.7.1/.libs/libjq.so.1.0.4 $(INSTALLDIR)/jq-1.7.1/usr/lib/libjq.so.1.0.4
+	install -D  jq-1.7.1/jq $(INSTALLDIR)/jq-1.7.1/usr/bin/jq
+	$(STRIP) $(INSTALLDIR)/jq-1.7.1/usr/lib/libjq.so.1.0.4
+	$(STRIP) $(INSTALLDIR)/jq-1.7.1/usr/bin/jq
+	cd $(INSTALLDIR)/jq-1.7.1/usr/lib/ && \
+		ln -sf libjq.so.1.0.4 libjq.so.1 && \
+		ln -sf libjq.so.1.0.4 libjq.so
+
+jq-1.7.1-clean:
+	cd jq-1.7.1 && \
+	make distclean
 #
 # tunnel related
 #
@@ -8978,13 +9044,13 @@ asusnatnl-install:
 
 mastiff: shared $(if $(BCM_502L07P2),ethctl_lib) nvram${BCMEX}$(EX7) wb
 	cd aaews && \
-	CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+	CC=$(CC) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="$(if $(RTCONFIG_DEBUG),-g,-Os) -Wall $(EXTRACFLAGS)" \
 	$(MAKE) mastiff
 
 mastiff-install:
 	install -d $(INSTALLDIR)/wb/usr/lib/
 	install -D aaews/mastiff $(INSTALLDIR)/wb/usr/sbin/mastiff
-	$(STRIP) -s $(INSTALLDIR)/wb/usr/sbin/mastiff
+	$(if $(RTCONFIG_DEBUG),,$(STRIP) -s $(INSTALLDIR)/wb/usr/sbin/mastiff)
 
 mastiff-clean:
 	cd aaews && make clean
@@ -9008,7 +9074,7 @@ lantiq_cmd-clean:
 #wb: shared $(if $(BCM_502L07P2),ethctl_lib) nvram curl openssl libxml2 asusnatnl
 aaews: wb
 	cd aaews && \
-	CC=$(CC) CXX=$(CXX) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="-Os -Wall $(EXTRACFLAGS)" \
+	CC=$(CC) CXX=$(CXX) AR=$(AR) RANLIB=$(RANLIB) LD=$(LD) CFLAGS="$(if $(RTCONFIG_DEBUG),-g,-Os) -Wall $(EXTRACFLAGS)" \
 	make router
 #make static-lib && \
 
@@ -10453,8 +10519,19 @@ usbmuxd-1.1.1-clean:
 	@rm -rf usbmuxd-1.1.1/Makefile usbmuxd-1.1.1/*/.deps
 endif
 endif
+ifeq ($(RTCONFIG_MT798X),y)
+cramfs-tools: zlib
+	$(MAKE) CFLAGS="-I$(STAGEDIR)/usr/include -Wall -O2 -s" \
+		LDFLAGS="-L$(STAGEDIR)/usr/lib" \
+		-C $@
 
+cramfs-tools-clean:
+	$(MAKE) -C cramfs-tools clean
 
+cramfs-tools-install:
+	install -D cramfs-tools/mkcramfs $(INSTALLDIR)/cramfs-tools/usr/sbin/mkcramfs
+	$(STRIP) $(INSTALLDIR)/cramfs-tools/usr/sbin/mkcramfs
+endif
 #
 # Generic rules
 #
@@ -10527,3 +10604,4 @@ $(obj-y) $(obj-n) $(obj-clean) $(obj-install): dummy
 .PHONY: all clean distclean mrproper install package image
 .PHONY: conf mconf oldconf kconf kmconf config menuconfig oldconfig
 .PHONY: dummy libnet libpcap
+

@@ -2917,6 +2917,7 @@ static int do_tcp_getsockopt(struct sock *sk, int level,
 			port = ntohs(inet->inet_dport);
 		if (port && lfp_query_port(port) == 1)
 			val = 1;
+		break;
 #endif
 
 	case TCP_FASTOPEN:

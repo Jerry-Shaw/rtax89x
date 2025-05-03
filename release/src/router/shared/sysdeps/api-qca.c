@@ -35,7 +35,7 @@ typedef uint32_t __u32;
 #define IEEE80211_IOCTL_GETCHANINFO     (SIOCIWFIRSTPRIV+7)
 typedef unsigned int	u_int;
 
-#if defined(RTCONFIG_SOC_IPQ50XX) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SOC_IPQ50XX) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 /* SPF11.4 or above, sync with qca-wifi's struct ieee80211_channel_info */
 struct ieee80211_channel {
     uint8_t ieee;
@@ -2416,6 +2416,12 @@ int get_radar_channel_list(const char *vphy, int radar_list[], int size)
 	fread(nol, sizeof(struct dfsreq_nolinfo), 1, fp);
 	fclose(fp);
 
+	if (nol->ic_nchans >= IEEE80211_CHAN_MAX) {
+		dbg("%s: Invalid ic_nchans %u/%u of nol file, ignore it!\n",
+			__func__, nol->ic_nchans, IEEE80211_CHAN_MAX);
+		return -4;
+	}
+
 	for(cnt = 0; cnt < nol->ic_nchans; cnt++) {
 		radar_list[cnt] = (int)ieee80211_mhz2ieee((u_int)nol->dfs_nol[cnt].nol_freq);
 #if 0
@@ -3083,3 +3089,4 @@ void execute_bt_bscp()
 		_dprintf("%s, Generate bt_bscp_conf fail.\n", __func__);
 }
 #endif
+

@@ -194,6 +194,15 @@ define(function(){
 				]
 			},
 			{
+				menuName: "Alexa & IFTTT",
+				index: "menu_Alexa_IFTTT",
+				tab: [
+					{url: "Advanced_Smart_Home_Alexa.asp", tabName: "__INHERIT__"},
+					{url: "Advanced_Smart_Home_IFTTT.asp", tabName: "__INHERIT__"},
+					{url: "NULL", tabName: "__INHERIT__"}
+				]
+			},
+			{
 				menuName: "IPv6",
 				index: "menu_IPv6",
 				tab: [
@@ -306,6 +315,10 @@ define(function(){
 					retArray.push("menu_AiCloud");
 				}
 
+				if(!ifttt_support && !alexa_support){
+					retArray.push("menu_Alexa_IFTTT");
+				}
+
 				if(!IPv6_support){
 					retArray.push("menu_IPv6");
 				}
@@ -360,6 +373,10 @@ define(function(){
 					retArray.push("menu_Firewall");
 					retArray.push("menu_ParentalControl");
 					retArray.push("menu_Wireless");
+
+					if(ifttt_support || alexa_support){
+						retArray.push("menu_Alexa_IFTTT");
+					}
 				}
 				else if(isSwMode("ap")){
 					retArray.push("menu_ParentalControl");
@@ -374,6 +391,10 @@ define(function(){
 					retArray.push("menu_VLAN");
 					retArray.push("menu_Firewall");
 					retArray.push("menu_ParentalControl");
+
+					if(ifttt_support || alexa_support){
+						retArray.push("menu_Alexa_IFTTT");
+					}
 				}
 				else if(isSwMode("mb")){
 					retArray.push("menu_ParentalControl");
@@ -390,6 +411,10 @@ define(function(){
 					retArray.push("menu_VLAN");
 					retArray.push("menu_Firewall");
 					retArray.push("menu_ParentalControl");
+
+					if(ifttt_support || alexa_support){
+						retArray.push("menu_Alexa_IFTTT");
+					}
 				}
 				else if(isSwMode("ew")){
 					retArray.push("menu_ParentalControl");
@@ -507,7 +532,7 @@ define(function(){
 					retArray.push("Advanced_Notification_Content.asp");
 				}
 
-				if(!smart_connect_support || Qcawifi_support || Rawifi_support){
+				if((!smart_connect_support && !smart_connect_v2_support) || Qcawifi_support || Rawifi_support){
 					retArray.push("Advanced_Smart_Connect.asp");
 				}
 				
@@ -558,6 +583,14 @@ define(function(){
 
 				if(!tencent_qmacc_support || !isSwMode("rt"))
 					retArray.push("GameBoost_Tencent.asp");
+
+				if(!alexa_support){
+					retArray.push("Advanced_Smart_Home_Alexa.asp");
+				}
+
+				if(!ifttt_support){
+					retArray.push("Advanced_Smart_Home_IFTTT.asp");
+				}
 
 				if(!IPv6_support){
 					retArray.push("Main_IPV6Status_Content.asp");

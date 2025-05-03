@@ -181,7 +181,8 @@ static int do_cold_boot_calibration(char *mod, int is_ftm);
 static void ath_hal_param_hook(char ***pv, char **ps, int *plen);
 static void umac_param_hook(char ***pv, char **ps, int *plen);
 static void umac_tmode_param_hook(char ***pv, char **ps, int *plen);
-#if defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) \
+ || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 static void qdf_param_hook(char ***pv, char **ps, int *plen);
 static void qdf_tmode_param_hook(char ***pv, char **ps, int *plen);
 #endif
@@ -229,7 +230,8 @@ static struct load_wifi_kmod_seq_s {
 	/* IPQ8074A SPF10 */
 	{ .kmod_name = "qdf", .flags = QWIFI_QDF,
 		.params = qdf_params,
-#if defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) \
+ || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 		.mission_mode_param_hook_fn = qdf_param_hook,
 		.test_mode_param_hook_fn = qdf_tmode_param_hook
 #endif
@@ -273,6 +275,9 @@ static struct load_wifi_kmod_seq_s {
 	{ .kmod_name = "wifi_3_0",
 		.post_fn = wifi_3_0_post_hook
 	},
+#if defined(RTCONFIG_SPF11_5_QSDK)
+	{ .kmod_name = "monitor" },	/* for TX/RX rate of STA */
+#endif
 	{ .kmod_name = "wifi_2_0" },
 #endif
 #else
@@ -635,7 +640,7 @@ static void umac_tmode_param_hook(char ***pv, char **ps, int *plen)
 
 #if defined(RTCONFIG_SOC_IPQ8074) \
  && (defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) \
-  || defined(RTCONFIG_SPF11_4_QSDK))
+  || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK))
 /* Generate parameters for qdf in mission mode. */
 static void qdf_param_hook(char ***pv, char **ps, int *plen)
 {
@@ -643,10 +648,10 @@ static void qdf_param_hook(char ***pv, char **ps, int *plen)
 		return;
 
 	// *(*pv)++ = "mem_debug_disabled=1";	// Only available if MEMORY_DEBUG is enabled in config_XXX.wlan.unified.profile
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	/* is_cnss_diag_logging_enabled() = 0 */
 	*(*pv)++ = "qdf_log_dump_at_kernel_enable=0";
-#if defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	*(*pv)++ = "qdf_log_flush_timer_period=0";
 #endif
 	update_ini_file(GLOBAL_INI, "logger_enable_mask=0");	/* 14 or another value if is_cnss_diag_logging_enabled() = 1 */
@@ -660,16 +665,16 @@ static void qdf_tmode_param_hook(char ***pv, char **ps, int *plen)
 		return;
 
 	// *(*pv)++ = "mem_debug_disabled=1";	// Only available if MEMORY_DEBUG is enabled in config_XXX.wlan.unified.profile
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	/* is_cnss_diag_logging_enabled() = 0 */
 	*(*pv)++ = "qdf_log_dump_at_kernel_enable=0";
-#if defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	*(*pv)++ = "qdf_log_flush_timer_period=0";
 #endif
 	update_ini_file(GLOBAL_INI, "logger_enable_mask=0");	/* 14 or another value if is_cnss_diag_logging_enabled() = 1 */
 #endif
 }
-#endif	/* RTCONFIG_SPF11_1_QSDK || RTCONFIG_SPF11_3_QSDK || defined(RTCONFIG_SPF11_4_QSDK) */
+#endif	/* RTCONFIG_SPF11_1_QSDK || RTCONFIG_SPF11_3_QSDK || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK) */
 
 #if defined(RTCONFIG_SOC_IPQ40XX) || \
     defined(RTCONFIG_WIFI_QCN5024_QCN5054) || \
@@ -730,7 +735,8 @@ static void qca_ol_tmode_param_hook(char ***pv, char **ps, int *plen)
 	*(*pv)++ = "testmode=1";
 	*(*pv)++ = "cfg80211_config=1";
 #elif defined(RTCONFIG_SPF11_QSDK) || defined(RTCONFIG_SPF11_1_QSDK) \
-   || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+   || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) \
+   || defined(RTCONFIG_SPF11_5_QSDK)
 	*(*pv)++ = "hw_mode_id=1";
 	*(*pv)++ = "testmode=1";
 	*(*pv)++ = "cfg80211_config=1";
@@ -1135,8 +1141,11 @@ static void init_switch_qca(void)
 		}
 #if defined(RTCONFIG_SOC_IPQ8074)
 		if (!strcmp(*qmod, "qca-ssdk")) {
+			/* 2.5Gbps needs qca-ssdk must >= SPF11.5 */
 			max_speed = nvram_get_int("sfpp_max_speed");
-			if (max_speed == 1000 || max_speed == 10000) {
+			if (max_speed == 1000 || max_speed == 10000
+			 || max_speed == 2500
+			) {
 				snprintf(speed, sizeof(speed), "max_speed=%d", max_speed);
 				*v++ = speed;
 			}
@@ -2142,7 +2151,8 @@ int switch_exist(void)
 
 #if !defined(RTCONFIG_QCA_WLAN_SCRIPTS)
 #if defined(RTCONFIG_SPF11_QSDK) || defined(RTCONFIG_SPF11_1_QSDK) \
- || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+ || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) \
+ || defined(RTCONFIG_SPF11_5_QSDK)
 /* SPF11.3, SPF11.4 update_global_daemon_coldboot_qdss_support_variables(). */
 static int update_daemon_coldboot_qdss_support_variables(int *cold_boot, int *daemon)
 {
@@ -2170,7 +2180,7 @@ static int update_daemon_coldboot_qdss_support_variables(int *cold_boot, int *da
 	fw_ini_file = "/lib/firmware/IPQ6018/firmware_rdp_feature.ini";
 #elif defined(RTCONFIG_SOC_IPQ8074)
 	strlcpy(board_name, "ap-hk01-c2", sizeof(board_name));
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	if (total_mem <= (512 * 1024)) {
 		/* 256MB profile will use the same file as 512MB profile,
 		 * but coldboot calibration support will be skipped.
@@ -2190,7 +2200,7 @@ static int update_daemon_coldboot_qdss_support_variables(int *cold_boot, int *da
 		fw_ini_file = "/lib/firmware/IPQ8074A/firmware_rdp_feature.ini";
 	else if (soc_ver == 1)
 		fw_ini_file = "/lib/firmware/IPQ8074/firmware_rdp_feature.ini";
-#endif	/* RTCONFIG_SPF11_3_QSDK || RTCONFIG_SPF11_4_QSDK */
+#endif	/* RTCONFIG_SPF11_3_QSDK || RTCONFIG_SPF11_4_QSDK || RTCONFIG_SPF11_5_QSDK */
 
 #else	/* !RTCONFIG_SOC_IPQ60XX */
 #error Define board_name!
@@ -2205,7 +2215,7 @@ static int update_daemon_coldboot_qdss_support_variables(int *cold_boot, int *da
 			*daemon = safe_atoi(val);
 	}
 
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	/* Force disable Coldboot Calibration for 256MB profile.
 	 * Daemon support and QDSS are only supported.
 	 */
@@ -2256,7 +2266,13 @@ static int update_daemon_coldboot_qdss_support_variables(int *cold_boot, int *da
 }
 #endif
 
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if !defined(RTCONFIG_QCA_WLAN_SCRIPTS)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
+/* SPF11.3 ~ SPF11.4:	update_daemon_cold_boot_support_to_plat_priv()
+ * SPF11.5:		update_platform_features_support_to_plat_priv()
+ * 			FIXME: Set enable_hds_support and enable_regdb_support if firmware_rdp_feature.ini
+ * 			       of new chip has it and enabled.
+ */
 static void update_daemon_cold_boot_support_to_plat_priv(int cold_boot, int daemon)
 {
 	int total_mem = get_meminfo_item("MemTotal");
@@ -2279,7 +2295,7 @@ static void update_daemon_cold_boot_support_to_plat_priv(int cold_boot, int daem
 static inline void update_daemon_cold_boot_support_to_plat_priv(int cold_boot, int daemon) { }
 #endif
 
-#if defined(RTCONFIG_SOC_IPQ8074) && defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SOC_IPQ8074) && defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 /* Implementation cold boot calibration.
  * @mod:	module name that can handle cold boot calibration.
  * @return:
@@ -2301,8 +2317,10 @@ static int do_cold_boot_calibration(char *mod, int is_ftm)
 
 	strlcpy(val, cold_boot? "1" : "0", sizeof(val));
 	strlcpy(val, daemon? "1" : "0", sizeof(val));
-	/* update_daemon_cold_boot_support_to_plat_priv() is incharge of enabling
-	 * cold_boot/daemon and must be executed after cnssdaemon started.
+	/* SPF11.4 ~ SPF11.5: update_daemon_cold_boot_support_to_plat_priv()
+	 * SPF11.5: update_platform_features_support_to_plat_priv()
+	 * is incharge of enabling cold_boot/daemon and must be executed after
+	 * cnssdaemon started.
 	 */
 
 	if (daemon) {
@@ -2543,10 +2561,11 @@ static int do_cold_boot_calibration(char *mod, int is_ftm)
 
 	return 0;
 }
-#endif	/* RTCONFIG_SPF8_QSDK || RTCONFIG_SPF10_QSDK || RTCONFIG_SPF11_QSDK || RTCONFIG_SPF11_1_QSDK || RTCONFIG_SPF11_3_QSDK || defined(RTCONFIG_SPF11_4_QSDK) */
+#endif	/* RTCONFIG_SPF11_4_QSDK || RTCONFIG_SPF11_5_QSDK */
+#endif	/* !RTCONFIG_QCA_WLAN_SCRIPTS */
 
 #if defined(RTCONFIG_GLOBAL_INI)
-#if defined(RTCONFIG_SOC_IPQ8074) && defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SOC_IPQ8074) && (defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK))
 static void update_ini_dp_rings_sbs_for_nss_offload()
 {
 	char *dp_rings_sbs[] = {
@@ -2596,7 +2615,7 @@ static void update_ini_dp_rings_for_nss_mode(void)
 }
 #else
 static inline void update_ini_dp_rings_for_nss_mode(void) { }
-#endif
+#endif	/* RTCONFIG_SOC_IPQ8074 || (RTCONFIG_SPF11_4_QSDK || RTCONFIG_SPF11_5_QSDK) */
 
 static void update_ini_nss_info(int hk_ol_num)
 {
@@ -2635,7 +2654,8 @@ static void update_ini_nss_info(int hk_ol_num)
  * 	0:	success
  *  otherwise:	error
  */
-#if defined(RTCONFIG_SPF11_QSDK) || defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_QSDK) || defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) \
+ || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 static int adjust_ring_buffer_in_ini(int total_mem)
 {
 	/* detect_qcawifi() */
@@ -2646,7 +2666,8 @@ static int adjust_ring_buffer_in_ini(int total_mem)
 			"dp_rxdma_monitor_dst_ring=128",
 			"dp_rxdma_monitor_desc_ring=128",
 			"dp_rxdma_monitor_status_ring=512",
-#if defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) \
+ || defined(RTCONFIG_SPF11_5_QSDK)
 			"num_vdevs_pdev0=9",
 			"num_vdevs_pdev1=9",
 			"num_vdevs_pdev2=9",
@@ -2657,7 +2678,7 @@ static int adjust_ring_buffer_in_ini(int total_mem)
 			"num_monitor_pdev1=0",
 			"num_monitor_pdev2=0",
 #endif
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 			"full_mon_mode=0",
 #endif
 			NULL
@@ -2722,7 +2743,8 @@ static int adjust_ring_buffer_in_ini(int total_mem)
 			"dp_rxdma_monitor_dst_ring=128",
 			"dp_rxdma_monitor_desc_ring=4096",
 			"dp_rxdma_monitor_status_ring=512",
-#if defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) \
+ || defined(RTCONFIG_SPF11_5_QSDK)
 			"num_vdevs_pdev0=9",
 			"num_vdevs_pdev1=9",
 			"num_vdevs_pdev2=9",
@@ -2780,7 +2802,7 @@ static int adjust_ring_buffer_in_ini(int total_mem)
 
 	return 0;
 }
-#endif	/* RTCONFIG_SPF11/SPF10_QSDK */
+#endif	/* RTCONFIG_SPF11_QSDK || RTCONFIG_SPF11_1_QSDK || RTCONFIG_SPF11_3_QSDK || RTCONFIG_SPF11_4_QSDK || RTCONFIG_SPF11_5_QSDK */
 #endif	/* RTCONFIG_GLOBAL_INI */
 
 /* Decide extra_pbuf_core0, n2h_high_water_core0, and n2h_wifi_pool_buf.
@@ -2794,7 +2816,8 @@ static int adjust_ring_buffer_in_ini(int total_mem)
  *  otherwise:	error
  */
 #if defined(RTCONFIG_SPF11_QSDK) || defined(RTCONFIG_SPF11_1_QSDK) \
- || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+ || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) \
+ || defined(RTCONFIG_SPF11_5_QSDK)
 static int get_nss_buf_size(int total_mem, int olcfg, const char **extra_pbuf_core0, const char **n2h_high_water_core0, const char **n2h_wifi_pool_buf)
 {
 	unsigned int hk_ol_num;
@@ -3034,7 +3057,7 @@ static void __load_wifi_driver(int testmode)
 	const char *n2h_high_water_core0 = "8704", *n2h_wifi_pool_buf = "0";
 	int r, r0, r1, r2, l0, l1, l2;
 #endif
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	char *spf11_3_fixed_ini_params[] = { "max_peers=0", "wds_ext=0",
 		"nss_wifi_radio_scheme_enable=1",	/* Enable the radio scheme flag */
 		"externalacs_enable=0",			/* icm_enable */
@@ -3064,7 +3087,7 @@ static void __load_wifi_driver(int testmode)
 
 	/* load_qcawifi() */
 	*v++ = "qwrap_enable=0";	/* SPF10.0 FC */
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	DPARM(v, s, len, "nss_wifi_olcfg=%d", olcfg);
 	if (olcfg) {
 		*v++ = "dp_rx_hash=0";
@@ -3076,7 +3099,7 @@ static void __load_wifi_driver(int testmode)
 	if (olcfg) {
 		*v++ = "rx_hash=0";
 	}
-#endif	/* RTCONFIG_SPF11_3_QSDK || RTCONFIG_SPF11_4_QSDK */
+#endif	/* RTCONFIG_SPF11_3_QSDK || RTCONFIG_SPF11_4_QSDK || RTCONFIG_SPF11_5_QSDK */
 #endif	/* RTCONFIG_WIFI_QCN5024_QCN5054 */
 #if defined(RTCONFIG_SOC_IPQ60XX)
 	DPARM(v, s, len, "nss_wifi_olcfg=%d", olcfg);
@@ -3085,7 +3108,7 @@ static void __load_wifi_driver(int testmode)
 	DPARM(v, s, len, "nss_wifi_olcfg=%d", !!olcfg);
 #endif
 
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	__update_ini_file(GLOBAL_I_INI, spf11_3_fixed_ini_params);
 #endif
 
@@ -3102,7 +3125,7 @@ static void __load_wifi_driver(int testmode)
 
 	update_ini_dp_rings_for_nss_mode();
 
-#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 #if defined(RTCONFIG_SOC_IPQ8074)
 	update_ini_file(QCA8074_I_INI, "dp_tx_allow_per_pkt_vdev_id_check=0");
 	update_ini_file(QCA8074V2_I_INI, "dp_tx_allow_per_pkt_vdev_id_check=0");
@@ -3825,7 +3848,8 @@ void fini_wl(void)
 	stop_mcsd();
 
 	dbG("fini_wl:destroy wi node\n");
-#if defined(RTCONFIG_SPF11_QSDK) || defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_QSDK) || defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) \
+ || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	/* in MBSS case, send notification to allow deletion of transmitting VAP */
 	for (i = WL_2G_BAND; i < MAX_NR_WL_IF; ++i) {
 		SKIP_ABSENT_BAND(i);
@@ -3846,7 +3870,8 @@ void fini_wl(void)
 
 	deinit_all_vaps(1);
 
-#if defined(RTCONFIG_SPF11_QSDK) || defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) || defined(RTCONFIG_SPF11_4_QSDK)
+#if defined(RTCONFIG_SPF11_QSDK) || defined(RTCONFIG_SPF11_1_QSDK) || defined(RTCONFIG_SPF11_3_QSDK) \
+ || defined(RTCONFIG_SPF11_4_QSDK) || defined(RTCONFIG_SPF11_5_QSDK)
 	for (i = WL_2G_BAND; i < MAX_NR_WL_IF; ++i) {
 		SKIP_ABSENT_BAND(i);
 
@@ -5094,3 +5119,4 @@ void set_tagged_based_vlan_config(char *interface)
 #endif
 
 #endif
+
