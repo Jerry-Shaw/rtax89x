@@ -110,7 +110,6 @@ extern void exec_uu_swrt(void);
 #if defined(RTCONFIG_FRS_LIVE_UPDATE) 
 extern int swrt_firmware_check_update_main(int argc, char *argv[]);
 #endif
-extern void check_auth_code(void) __attribute__((weak));
 #if defined(RTCONFIG_SWRT_LED)
 extern void swrt_ledon(void);
 #endif

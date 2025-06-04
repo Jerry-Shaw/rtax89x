@@ -22551,9 +22551,7 @@ int start_cfgsync(void)
 	char *cfg_client_argv[] = {"cfg_client", NULL};
 	pid_t pid;
 	int ret = 0;
-#if defined(SWRT_VER_MAJOR_B)
-	return 0;
-#endif
+
 #ifdef RTCONFIG_MASTER_DET
 	if (nvram_match("cfg_master", "1") && (is_router_mode() || access_point_mode()))
 #else

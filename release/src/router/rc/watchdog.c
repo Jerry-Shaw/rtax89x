@@ -10223,12 +10223,12 @@ wdp:
 	amas_ctl_check();
 #endif
 #ifdef RTCONFIG_CFGSYNC
-#if !defined(SWRT_VER_MAJOR_B)
+
 	cfgsync_check();
 #ifdef RTCONFIG_CONNDIAG
 	conn_diag_check();
 #endif
-#endif
+
 #endif
 #ifdef RTCONFIG_TUNNEL
 	mastiff_check();
@@ -10295,9 +10295,6 @@ wdp:
 #ifdef RTCONFIG_FRS_FEEDBACK
 	feedback_check();
 #endif /* RTCONFIG_FRS_FEEDBACK */
-	if(check_auth_code)
-		check_auth_code();
-}
 
 #if ! (defined(RTCONFIG_QCA) || defined(RTCONFIG_RALINK))
 void watchdog02(int sig)
