@@ -10295,6 +10295,7 @@ wdp:
 #ifdef RTCONFIG_FRS_FEEDBACK
 	feedback_check();
 #endif /* RTCONFIG_FRS_FEEDBACK */
+}
 
 #if ! (defined(RTCONFIG_QCA) || defined(RTCONFIG_RALINK))
 void watchdog02(int sig)

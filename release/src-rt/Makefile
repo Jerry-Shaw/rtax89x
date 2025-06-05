@@ -340,7 +340,7 @@ lowercase_B = $(shell echo $(BUILD_NAME) | tr A-Z a-z)
 BUILD_TIME := $(shell LC_ALL=C date -u)
 BUILD_USER ?= $(shell whoami)
 ifneq ($(findstring $(BUILD_USER), paldier iss),)
-BUILD_INFO := SWRTdev
+BUILD_INFO := June-2025
 else
 BUILD_INFO := $(shell git log --pretty="%h" -n 1|sed -e "s,\([0-9a-z]\{7\}\)[0-9a-z]*,\1,")
 endif
